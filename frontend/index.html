@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .hero { text-align: center; color: #fff; }
+        .hero-icon { font-size: 4.5rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2)); }
+        .hero h1 { font-size: 2.8rem; margin: 0.6rem 0 0.3rem; letter-spacing: -0.02em; font-weight: 800; }
+        .hero .subtitle { font-size: 1.2rem; opacity: 0.92; font-weight: 500; }
+        .hero .tagline { opacity: 0.72; margin-top: 0.5rem; font-size: 0.95rem; }
+        .hero-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; }
+        .hero-actions a {
+            padding: 0.85rem 2.8rem; font-size: 1.05rem; border-radius: 30px;
+            font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hero-actions a:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+        .hero-actions .btn-login { background: #fff; color: var(--primary-dark); }
+        .hero-actions .btn-register { border: 2px solid rgba(255,255,255,0.8); background: transparent; color: #fff; }
+        .feature-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem;
+            margin-top: 2.5rem; max-width: 820px; width: 100%; padding: 0 1rem;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.13); backdrop-filter: blur(8px);
+            padding: 1.5rem 1rem; border-radius: var(--radius-lg); text-align: center; color: #fff;
+            border: 1px solid rgba(255,255,255,0.15); transition: transform 0.25s, background 0.25s;
+        }
+        .feature-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.22); }
+        .feature-card .fc-icon { font-size: 2.2rem; }
+        .feature-card .fc-title { font-weight: 700; margin: 0.5rem 0 0.25rem; }
+        .feature-card .fc-desc { font-size: 0.8rem; opacity: 0.8; line-height: 1.4; }
+        @media (max-width: 640px) {
+            .feature-grid { grid-template-columns: repeat(2, 1fr); }
+            .hero h1 { font-size: 2rem; }
+            .hero-actions { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-wrapper" style="flex-direction:column;gap:2rem;">
+        <div class="hero">
+            <div class="hero-icon">🌿</div>
+            <h1>Wild Tea Tree</h1>
+            <p class="subtitle">Big Data Visualization Platform</p>
+            <p class="tagline">Collect, analyze, and visualize wild tea tree ecological data</p>
+        </div>
+        <div class="hero-actions">
+            <a href="/login" class="btn-login">Login</a>
+            <a href="/register" class="btn-register">Register</a>
+        </div>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="fc-icon">🌳</div>
+                <div class="fc-title">Tree Data</div>
+                <div class="fc-desc">Manage & track tea tree records</div>
+            </div>
+            <div class="feature-card">
+                <div class="fc-icon">🗺️</div>
+                <div class="fc-title">Map View</div>
+                <div class="fc-desc">Interactive geospatial visualization</div>
+            </div>
+            <div class="feature-card">
+                <div class="fc-icon">📊</div>
+                <div class="fc-title">Analytics</div>
+                <div class="fc-desc">Correlation & regression analysis</div>
+            </div>
+            <div class="feature-card">
+                <div class="fc-icon">🌡️</div>
+                <div class="fc-title">Environment</div>
+                <div class="fc-desc">Track environmental conditions</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // If already logged in, redirect to dashboard
+        if (localStorage.getItem("tea_token")) {
+            window.location.href = "/dashboard";
+        }
+    </script>
+</body>
+</html>

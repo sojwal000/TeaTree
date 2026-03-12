@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite & NDVI – Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+        /* ── page-specific ─────────────────────────────── */
+        .sat-hero { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2rem; }
+        .sat-hero .card { padding:0; overflow:hidden; }
+        .sat-hero .card-head {
+            background:linear-gradient(135deg,var(--primary-dark),var(--primary));
+            color:#fff; padding:1rem 1.4rem; font-weight:700; font-size:1.05rem;
+            display:flex; align-items:center; gap:.5rem;
+        }
+        .sat-hero .card-body { padding:1.2rem 1.4rem; }
+
+        /* region summary table */
+        .region-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+        .region-table th { text-align:left; padding:.65rem .6rem; border-bottom:2px solid var(--border); color:var(--text-light); font-weight:600; text-transform:uppercase; font-size:.75rem; letter-spacing:.04em; }
+        .region-table td { padding:.6rem; border-bottom:1px solid var(--border); }
+        .region-table tr:hover td { background:var(--accent-light); }
+
+        .vhi-badge {
+            display:inline-block; padding:.2rem .65rem; border-radius:20px;
+            font-size:.78rem; font-weight:600; color:#fff;
+        }
+        .vhi-Excellent { background:#2d6a4f; }
+        .vhi-Good      { background:#40916c; }
+        .vhi-Moderate   { background:#f9a825; color:#333; }
+        .vhi-Poor       { background:#e65100; }
+        .vhi-Critical   { background:#d32f2f; }
+
+        /* tree lookup */
+        .lookup-row { display:flex; gap:.8rem; align-items:flex-end; flex-wrap:wrap; }
+        .lookup-row .field { display:flex; flex-direction:column; gap:.3rem; }
+        .lookup-row label { font-size:.8rem; font-weight:600; color:var(--text-light); text-transform:uppercase; }
+        .lookup-row input, .lookup-row select { padding:.55rem .8rem; border:1px solid var(--border); border-radius:8px; font-size:.9rem; }
+        .lookup-row button { padding:.55rem 1.4rem; }
+
+        /* detail panels */
+        .detail-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin:1.2rem 0; }
+        .detail-stat { text-align:center; padding:1rem; background:var(--bg); border-radius:10px; }
+        .detail-stat .val { font-size:1.6rem; font-weight:800; color:var(--primary); }
+        .detail-stat .lbl { font-size:.75rem; text-transform:uppercase; color:var(--text-light); margin-top:.25rem; }
+
+        /* chart row */
+        .chart-row { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:1.5rem; }
+        .chart-box { height:360px; }
+
+        @media (max-width:900px) {
+            .sat-hero { grid-template-columns:1fr; }
+            .chart-row { grid-template-columns:1fr; }
+            .detail-grid { grid-template-columns:repeat(2,1fr); }
+        }
+        @media (max-width:600px) {
+            .detail-grid { grid-template-columns:1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div id="navbar"></div>
+
+<div class="container">
+    <div class="page-header">
+        <h1>🛰️ Satellite & Vegetation Index</h1>
+        <p class="subtitle">NASA POWER data — regional vegetation health &amp; per-tree NDVI analysis</p>
+    </div>
+
+    <!-- ── Hero: Region Summary + Chart ── -->
+    <div class="sat-hero">
+        <div class="card">
+            <div class="card-head">🌍 Regional Vegetation Summary</div>
+            <div class="card-body" id="regionBody">
+                <div class="loading"><div class="spinner"></div> Fetching NASA POWER data…</div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-head">📊 VHI Distribution</div>
+            <div class="card-body">
+                <div id="vhiChart" class="chart-box"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Tree Lookup ── -->
+    <div class="card" style="margin-bottom:2rem;">
+        <div class="card-title">🔎 Per-Tree Vegetation Analysis</div>
+        <div class="lookup-row">
+            <div class="field">
+                <label>Select tree</label>
+                <select id="treeSelect"><option value="">Loading trees…</option></select>
+            </div>
+            <div class="field">
+                <label>Period (days)</label>
+                <input type="number" id="daysInput" value="30" min="7" max="365" style="width:90px;">
+            </div>
+            <button class="btn btn-primary" onclick="fetchTreeVegetation()">Analyze</button>
+        </div>
+        <div id="treeResult" style="margin-top:1.4rem;"></div>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+if (!requireAuth()) throw "";
+document.getElementById("navbar").innerHTML = renderNavbar("Satellite");
+
+function escapeHtml(s) {
+    const d = document.createElement("div"); d.textContent = s; return d.innerHTML;
+}
+
+/* ═══ Region Summary ═══ */
+async function loadRegionSummary() {
+    try {
+        const data = await apiGet("/api/satellite/region-summary");
+        const locs = data.locations || [];
+        if (!locs.length) { document.getElementById("regionBody").innerHTML = "<p>No locations found.</p>"; return; }
+
+        let rows = locs.map(l => {
+            const vhi = l.vegetation_index;
+            const badge = vhi != null
+                ? `<span class="vhi-badge vhi-${escapeHtml(l.status)}">${vhi}</span>`
+                : `<span style="color:var(--text-light)">—</span>`;
+            return `<tr>
+                <td><strong>${escapeHtml(l.location)}</strong></td>
+                <td>${l.tree_count}</td>
+                <td>${l.avg_temperature != null ? l.avg_temperature + ' °C' : '—'}</td>
+                <td>${l.total_precipitation_mm != null ? l.total_precipitation_mm + ' mm' : '—'}</td>
+                <td>${badge}</td>
+                <td>${escapeHtml(l.status)}</td>
+            </tr>`;
+        }).join("");
+
+        document.getElementById("regionBody").innerHTML = `
+            <table class="region-table">
+                <thead><tr><th>Location</th><th>Trees</th><th>Avg Temp</th><th>Precip (30d)</th><th>VHI</th><th>Status</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+
+        renderVhiChart(locs);
+    } catch (e) {
+        document.getElementById("regionBody").innerHTML = `<p style="color:var(--danger)">Failed to load: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function renderVhiChart(locs) {
+    const valid = locs.filter(l => l.vegetation_index != null);
+    const chart = echarts.init(document.getElementById("vhiChart"));
+    const statusColor = { Excellent:"#2d6a4f", Good:"#40916c", Moderate:"#f9a825", Poor:"#e65100", Critical:"#d32f2f" };
+
+    chart.setOption({
+        tooltip: { trigger:"axis", axisPointer:{ type:"shadow" } },
+        grid: { left:60, right:20, top:20, bottom:60 },
+        xAxis: { type:"category", data: valid.map(l=>l.location), axisLabel:{ rotate:35, fontSize:11 } },
+        yAxis: { type:"value", name:"VHI", max:100 },
+        series: [{
+            type:"bar", barMaxWidth:40,
+            data: valid.map(l => ({
+                value: l.vegetation_index,
+                itemStyle: { color: statusColor[l.status] || "#888", borderRadius:[6,6,0,0] }
+            })),
+        }],
+    });
+    window.addEventListener("resize", () => chart.resize());
+}
+
+/* ═══ Tree Selector ═══ */
+async function loadTreeList() {
+    try {
+        const trees = await apiGet("/api/trees?limit=500");
+        const sel = document.getElementById("treeSelect");
+        sel.innerHTML = '<option value="">— choose a tree —</option>' +
+            trees.map(t => `<option value="${escapeHtml(t.tree_id)}">${escapeHtml(t.tree_id)} — ${escapeHtml(t.location_name)}</option>`).join("");
+    } catch (e) { console.error(e); }
+}
+
+/* ═══ Per-Tree Vegetation ═══ */
+async function fetchTreeVegetation() {
+    const treeId = document.getElementById("treeSelect").value;
+    const days = document.getElementById("daysInput").value || 30;
+    const box = document.getElementById("treeResult");
+    if (!treeId) { box.innerHTML = "<p>Please select a tree first.</p>"; return; }
+    box.innerHTML = '<div class="loading"><div class="spinner"></div> Querying NASA POWER…</div>';
+
+    try {
+        const d = await apiGet(`/api/satellite/vegetation/${encodeURIComponent(treeId)}?days=${days}`);
+        const s = d.summary;
+
+        box.innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-stat"><div class="val">${s.vegetation_health_index}</div><div class="lbl">VHI Score</div></div>
+                <div class="detail-stat"><div class="val">${s.avg_temperature} °C</div><div class="lbl">Avg Temp</div></div>
+                <div class="detail-stat"><div class="val">${s.total_precipitation_mm} mm</div><div class="lbl">Total Precip</div></div>
+                <div class="detail-stat"><div class="val">${s.avg_solar_radiation}</div><div class="lbl">Solar Rad (MJ/m²)</div></div>
+            </div>
+            <p><strong>Status:</strong> <span class="vhi-badge vhi-${escapeHtml(s.vegetation_status)}">${escapeHtml(s.vegetation_status)}</span>
+               &nbsp; | &nbsp; Humidity: ${s.avg_humidity}% &nbsp; | &nbsp; Period: ${escapeHtml(d.period.start)} → ${escapeHtml(d.period.end)}</p>
+            <div class="chart-row">
+                <div class="card"><h4 style="padding:.8rem 1rem 0;">🌡️ Temperature & Precipitation</h4><div id="treeClimateChart" class="chart-box"></div></div>
+                <div class="card"><h4 style="padding:.8rem 1rem 0;">☀️ Solar Radiation</h4><div id="treeSolarChart" class="chart-box"></div></div>
+            </div>`;
+
+        renderTreeCharts(d.daily);
+    } catch (e) {
+        box.innerHTML = `<p style="color:var(--danger)">Error: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function renderTreeCharts(daily) {
+    const dates = daily.map(r => r.date);
+    const temps = daily.map(r => r.temperature);
+    const precip = daily.map(r => r.precipitation);
+    const solar = daily.map(r => r.solar_radiation);
+
+    /* temp + precip dual axis */
+    const c1 = echarts.init(document.getElementById("treeClimateChart"));
+    c1.setOption({
+        tooltip: { trigger:"axis" },
+        legend: { bottom:0, data:["Temperature","Precipitation"] },
+        grid: { left:50, right:50, top:20, bottom:50 },
+        xAxis: { type:"category", data:dates, axisLabel:{ fontSize:10, rotate:45 } },
+        yAxis: [
+            { type:"value", name:"°C", position:"left" },
+            { type:"value", name:"mm", position:"right" },
+        ],
+        series: [
+            { name:"Temperature", type:"line", smooth:true, data:temps, itemStyle:{ color:"#e65100" }, lineStyle:{ width:2 }, areaStyle:{ color:{ type:"linear", x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:"rgba(230,81,0,0.25)"},{offset:1,color:"rgba(230,81,0,0.02)"}] } } },
+            { name:"Precipitation", type:"bar", yAxisIndex:1, data:precip, itemStyle:{ color:"#0288d1", borderRadius:[4,4,0,0] } },
+        ],
+    });
+
+    /* solar line */
+    const c2 = echarts.init(document.getElementById("treeSolarChart"));
+    c2.setOption({
+        tooltip: { trigger:"axis" },
+        grid: { left:50, right:20, top:20, bottom:50 },
+        xAxis: { type:"category", data:dates, axisLabel:{ fontSize:10, rotate:45 } },
+        yAxis: { type:"value", name:"MJ/m²/day" },
+        series: [{
+            type:"line", smooth:true, data:solar,
+            itemStyle:{ color:"#f9a825" },
+            lineStyle:{ width:2 },
+            areaStyle:{ color:{ type:"linear", x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:"rgba(249,168,37,0.3)"},{offset:1,color:"rgba(249,168,37,0.02)"}] } },
+        }],
+    });
+
+    window.addEventListener("resize", () => { c1.resize(); c2.resize(); });
+}
+
+/* ═══ Init ═══ */
+loadRegionSummary();
+loadTreeList();
+</script>
+</body>
+</html>

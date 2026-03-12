@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Detail — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .tree-info td:first-child { width: 140px; color: var(--text-muted); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .tree-info td:last-child { font-weight: 500; }
+        .img-gallery { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+        .img-gallery img {
+            width: 180px; height: 140px; object-fit: cover; border-radius: var(--radius);
+            cursor: pointer; border: 2px solid var(--border); transition: transform var(--transition), box-shadow var(--transition);
+        }
+        .img-gallery img:hover { transform: scale(1.05); box-shadow: var(--shadow-md); }
+        .health-result-box { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+        .back-link { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 1.5rem; }
+        @media (max-width: 768px) {
+            .img-gallery img { width: 140px; height: 110px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>🌳 Tree Detail</h1>
+            <p id="tree-subtitle">Loading...</p>
+        </div>
+
+        <div id="content">
+            <div class="loading"><div class="spinner"></div> Loading tree data...</div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Trees");
+
+        const treeId = window.location.pathname.split("/").pop();
+
+        async function loadTreeDetail() {
+            try {
+                const tree = await apiGet(`/api/trees/${treeId}`);
+                document.getElementById("tree-subtitle").textContent = `${tree.location_name} — ID: ${tree.tree_id}`;
+
+                let envHtml = "";
+                try {
+                    const envData = await apiGet(`/api/environmental?tree_id=${treeId}&limit=20`);
+                    if (envData.length > 0) {
+                        const rows = envData.map(e => `
+                            <tr>
+                                <td>${formatDate(e.timestamp)}</td>
+                                <td>${e.temperature != null ? roundNum(e.temperature) + "°C" : "—"}</td>
+                                <td>${e.humidity != null ? roundNum(e.humidity) + "%" : "—"}</td>
+                                <td>${e.wind_speed != null ? roundNum(e.wind_speed) + " m/s" : "—"}</td>
+                                <td>${e.co2_level != null ? roundNum(e.co2_level) + " ppm" : "—"}</td>
+                            </tr>
+                        `).join("");
+                        envHtml = `
+                            <div class="card">
+                                <div class="card-title">🌡️ Environmental Records</div>
+                                <table class="data-table">
+                                    <thead><tr><th>Date</th><th>Temp</th><th>Humidity</th><th>Wind</th><th>CO₂</th></tr></thead>
+                                    <tbody>${rows}</tbody>
+                                </table>
+                            </div>`;
+                    }
+                } catch {}
+
+                document.getElementById("content").innerHTML = `
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-title">📋 Tree Information</div>
+                            <table class="data-table">
+                                <tr><td><strong>Tree ID</strong></td><td>${tree.tree_id}</td></tr>
+                                <tr><td><strong>Location</strong></td><td>${tree.location_name}</td></tr>
+                                <tr><td><strong>Height</strong></td><td>${roundNum(tree.height)} m</td></tr>
+                                <tr><td><strong>Diameter</strong></td><td>${roundNum(tree.diameter)} cm</td></tr>
+                                <tr><td><strong>Ring Count</strong></td><td>${tree.ring_count != null ? tree.ring_count : "—"}</td></tr>
+                                <tr><td><strong>Elevation</strong></td><td>${roundNum(tree.elevation)} m</td></tr>
+                                <tr><td><strong>Coordinates</strong></td><td>${roundNum(tree.latitude, 6)}, ${roundNum(tree.longitude, 6)}</td></tr>
+                                <tr><td><strong>Created</strong></td><td>${formatDate(tree.created_at)}</td></tr>
+                                <tr><td><strong>Updated</strong></td><td>${formatDate(tree.updated_at)}</td></tr>
+                            </table>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">📊 Tree Metrics Radar</div>
+                            <div class="chart-container" id="radar-chart"></div>
+                        </div>
+                    </div>
+
+                    <!-- Image Gallery & Upload -->
+                    <div class="card">
+                        <div class="card-title">📷 Tree Images</div>
+                        <div id="image-gallery" class="img-gallery">
+                            ${tree.images && tree.images.length > 0
+                                ? tree.images.map(img => `
+                                    <div style="position:relative;">
+                                        <img src="${img}" alt="Tree photo" onclick="window.open('${img}','_blank')">
+                                    </div>`).join("")
+                                : '<p style="color:var(--text-muted);">No images uploaded yet.</p>'
+                            }
+                        </div>
+                        <form id="image-upload-form" style="display:flex;align-items:center;gap:1rem;">
+                            <input type="file" id="image-files" accept=".jpg,.jpeg,.png,.webp,.gif" multiple class="form-control" style="max-width:350px;">
+                            <button type="submit" class="btn btn-primary btn-sm">📤 Upload Images</button>
+                        </form>
+                    </div>
+
+                    <!-- AI Health Check -->
+                    <div class="card">
+                        <div class="card-title">🔬 AI Health Analysis</div>
+                        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-start;">
+                            <div style="flex:1;min-width:250px;">
+                                <p style="color:var(--text-light);margin-bottom:0.75rem;">Upload a tree photo to analyze health using AI-powered image analysis.</p>
+                                <form id="health-check-form" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                                    <input type="file" id="health-file" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="max-width:300px;">
+                                    <button type="submit" class="btn btn-primary btn-sm">🔬 Analyze Health</button>
+                                </form>
+                                <div id="health-result" style="margin-top:1rem;"></div>
+                            </div>
+                            <div id="health-history" style="flex:1;min-width:250px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Live Climate Data -->
+                    <div class="card">
+                        <div class="card-title">🌤️ Live Climate Data</div>
+                        <div id="climate-data"><div class="loading"><div class="spinner"></div> Fetching weather data...</div></div>
+                    </div>
+
+                    <!-- Satellite Vegetation Health -->
+                    <div class="card">
+                        <div class="card-title">🛰️ Vegetation Health (NASA POWER)</div>
+                        <div id="vegetation-data"><div class="loading"><div class="spinner"></div> Fetching satellite data...</div></div>
+                    </div>
+
+                    ${envHtml}
+                    <div class="card">
+                        <div class="card-title">🌡️ Add Environmental Record</div>
+                        <form id="env-form" class="grid-2" style="gap:1rem;">
+                            <div class="form-group">
+                                <label>Temperature (°C)</label>
+                                <input type="number" step="0.1" id="env-temp" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>Humidity (%)</label>
+                                <input type="number" step="0.1" id="env-hum" class="form-control" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Wind Speed (m/s)</label>
+                                <input type="number" step="0.1" id="env-wind" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>CO₂ Level (ppm)</label>
+                                <input type="number" step="0.1" id="env-co2" class="form-control" min="0">
+                            </div>
+                            <div style="grid-column:1/-1;">
+                                <button type="submit" class="btn btn-primary">Save Environmental Record</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div style="margin-top:1rem;">
+                        <a href="/trees" class="btn btn-secondary back-link">← Back to Tree List</a>
+                    </div>
+                `;
+
+                // Radar chart
+                const radarChart = echarts.init(document.getElementById("radar-chart"));
+                const maxH = 50, maxD = 200, maxR = 500, maxE = 3000;
+                radarChart.setOption({
+                    radar: {
+                        indicator: [
+                            { name: "Height", max: maxH },
+                            { name: "Diameter", max: maxD },
+                            { name: "Ring Count", max: maxR },
+                            { name: "Elevation", max: maxE },
+                        ],
+                    },
+                    series: [{
+                        type: "radar",
+                        data: [{
+                            value: [tree.height, tree.diameter, tree.ring_count || 0, tree.elevation],
+                            name: "This Tree",
+                            areaStyle: { opacity: 0.3 },
+                            lineStyle: { color: "#2d6a4f" },
+                            itemStyle: { color: "#2d6a4f" },
+                        }],
+                    }],
+                });
+                window.addEventListener("resize", () => radarChart.resize());
+
+                // Env form handler
+                document.getElementById("env-form").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    try {
+                        const payload = { tree_id: treeId };
+                        const temp = document.getElementById("env-temp").value;
+                        const hum = document.getElementById("env-hum").value;
+                        const wind = document.getElementById("env-wind").value;
+                        const co2 = document.getElementById("env-co2").value;
+                        if (temp) payload.temperature = parseFloat(temp);
+                        if (hum) payload.humidity = parseFloat(hum);
+                        if (wind) payload.wind_speed = parseFloat(wind);
+                        if (co2) payload.co2_level = parseFloat(co2);
+
+                        await apiPost("/api/environmental", payload);
+                        alert("Environmental record saved!");
+                        loadTreeDetail();
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+
+                // Image upload handler
+                document.getElementById("image-upload-form").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const fileInput = document.getElementById("image-files");
+                    if (!fileInput.files.length) {
+                        alert("Please select at least one image file.");
+                        return;
+                    }
+                    const formData = new FormData();
+                    for (const file of fileInput.files) {
+                        formData.append("files", file);
+                    }
+                    try {
+                        const token = getToken();
+                        const res = await fetch(`/api/trees/${treeId}/images`, {
+                            method: "POST",
+                            headers: { "Authorization": `Bearer ${token}` },
+                            body: formData,
+                        });
+                        if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.detail || "Upload failed");
+                        }
+                        const result = await res.json();
+                        alert(`Uploaded ${result.uploaded} image(s) successfully!`);
+                        loadTreeDetail();
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+
+                // Health check handler
+                document.getElementById("health-check-form").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const fileInput = document.getElementById("health-file");
+                    if (!fileInput.files.length) {
+                        alert("Please select an image for health analysis.");
+                        return;
+                    }
+                    const formData = new FormData();
+                    formData.append("file", fileInput.files[0]);
+                    document.getElementById("health-result").innerHTML = '<div class="loading"><div class="spinner"></div> Analyzing...</div>';
+                    try {
+                        const token = getToken();
+                        const res = await fetch(`/api/health/${treeId}/check`, {
+                            method: "POST",
+                            headers: { "Authorization": `Bearer ${token}` },
+                            body: formData,
+                        });
+                        if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.detail || "Analysis failed");
+                        }
+                        const result = await res.json();
+                        const scoreColor = result.health_score >= 80 ? "#2e7d32" : result.health_score >= 60 ? "#558b2f" : result.health_score >= 40 ? "#f9a825" : "#d32f2f";
+                        document.getElementById("health-result").innerHTML = `
+                            <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+                                <div class="score-circle" style="border-color:${scoreColor};color:${scoreColor};">${result.health_score}</div>
+                                <div>
+                                    <h3 style="color:${scoreColor};margin-bottom:0.25rem;">${result.health_status}</h3>
+                                    <p style="font-size:0.85rem;color:var(--text-light);">Green: ${(result.metrics.green_ratio*100).toFixed(1)}% · Canopy: ${(result.metrics.canopy_density*100).toFixed(1)}%</p>
+                                </div>
+                            </div>
+                            ${result.issues.length > 0 ? '<div style="margin-top:0.75rem;"><strong>Issues Found:</strong><ul style="margin:0.25rem 0 0 1.2rem;font-size:0.85rem;">' + result.issues.map(i => `<li><strong>${i.type}</strong> (${i.severity}): ${i.description}</li>`).join("") + '</ul></div>' : ''}
+                            ${result.recommendations.length > 0 ? '<div style="margin-top:0.5rem;"><strong>Recommendations:</strong><ul style="margin:0.25rem 0 0 1.2rem;font-size:0.85rem;">' + result.recommendations.map(r => `<li>${r}</li>`).join("") + '</ul></div>' : ''}
+                        `;
+                        loadHealthHistory();
+                    } catch (err) {
+                        document.getElementById("health-result").innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+                    }
+                });
+
+                // Load health history
+                async function loadHealthHistory() {
+                    try {
+                        const records = await apiGet(`/api/health/${treeId}/history?limit=5`);
+                        if (records.length > 0) {
+                            document.getElementById("health-history").innerHTML = `
+                                <strong>Recent Health Checks:</strong>
+                                <div style="margin-top:0.5rem;">
+                                    ${records.map(r => {
+                                        const c = r.health_score >= 80 ? "#2e7d32" : r.health_score >= 60 ? "#558b2f" : r.health_score >= 40 ? "#f9a825" : "#d32f2f";
+                                        return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                                            <div style="width:45px;height:45px;border-radius:50%;border:3px solid ${c};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:${c};">${r.health_score}</div>
+                                            <div>
+                                                <div style="font-weight:600;font-size:0.85rem;color:${c};">${r.health_status}</div>
+                                                <div style="font-size:0.75rem;color:var(--text-light);">${formatDate(r.analyzed_at)}</div>
+                                            </div>
+                                        </div>`;
+                                    }).join("")}
+                                </div>`;
+                        } else {
+                            document.getElementById("health-history").innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;">No health checks yet.</p>';
+                        }
+                    } catch { document.getElementById("health-history").innerHTML = ""; }
+                }
+                loadHealthHistory();
+
+                // Load climate data
+                async function loadClimateData() {
+                    try {
+                        const climate = await apiGet(`/api/climate/tree/${treeId}`);
+                        const c = climate.current;
+                        document.getElementById("climate-data").innerHTML = `
+                            <div class="stats-grid" style="margin-bottom:1rem;">
+                                <div class="stat-card"><div class="stat-value">${c.temperature != null ? c.temperature + "°C" : "—"}</div><div class="stat-label">Temperature</div></div>
+                                <div class="stat-card"><div class="stat-value">${c.humidity != null ? c.humidity + "%" : "—"}</div><div class="stat-label">Humidity</div></div>
+                                <div class="stat-card"><div class="stat-value">${c.wind_speed != null ? c.wind_speed + " km/h" : "—"}</div><div class="stat-label">Wind Speed</div></div>
+                                <div class="stat-card"><div class="stat-value">${c.weather_description || "—"}</div><div class="stat-label">Conditions</div></div>
+                            </div>
+                            ${climate.forecast_7day ? `
+                                <strong>7-Day Forecast:</strong>
+                                <table class="data-table" style="margin-top:0.5rem;">
+                                    <thead><tr><th>Date</th><th>Max</th><th>Min</th><th>Precip</th><th>Conditions</th></tr></thead>
+                                    <tbody>${climate.forecast_7day.map(f => `
+                                        <tr>
+                                            <td>${f.date}</td>
+                                            <td>${f.temp_max != null ? f.temp_max + "°C" : "—"}</td>
+                                            <td>${f.temp_min != null ? f.temp_min + "°C" : "—"}</td>
+                                            <td>${f.precipitation != null ? f.precipitation + " mm" : "—"}</td>
+                                            <td>${f.weather_description || "—"}</td>
+                                        </tr>`).join("")}
+                                    </tbody>
+                                </table>` : ""}
+                        `;
+                    } catch (err) {
+                        document.getElementById("climate-data").innerHTML = `<p style="color:var(--text-light);">Climate data unavailable: ${err.message}</p>`;
+                    }
+                }
+                loadClimateData();
+
+                // Load vegetation / satellite data
+                async function loadVegetationData() {
+                    try {
+                        const v = await apiGet(`/api/satellite/vegetation/${treeId}?days=30`);
+                        const s = v.summary;
+                        const statusColor = {"Excellent":"#2d6a4f","Good":"#40916c","Moderate":"#f9a825","Poor":"#e65100","Critical":"#d32f2f"};
+                        const c = statusColor[s.vegetation_status] || "#666";
+                        document.getElementById("vegetation-data").innerHTML = `
+                            <div class="stats-grid" style="margin-bottom:1rem;">
+                                <div class="stat-card"><div class="stat-value" style="color:${c}">${s.vegetation_health_index}</div><div class="stat-label">VHI Score</div></div>
+                                <div class="stat-card"><div class="stat-value">${s.avg_temperature} °C</div><div class="stat-label">Avg Temp (30d)</div></div>
+                                <div class="stat-card"><div class="stat-value">${s.total_precipitation_mm} mm</div><div class="stat-label">Total Precip</div></div>
+                                <div class="stat-card"><div class="stat-value">${s.avg_solar_radiation}</div><div class="stat-label">Solar Rad (MJ/m²)</div></div>
+                            </div>
+                            <p><strong>Status:</strong> <span style="display:inline-block;padding:.2rem .65rem;border-radius:20px;font-size:.82rem;font-weight:600;color:#fff;background:${c}">${s.vegetation_status}</span>
+                               &nbsp;|&nbsp; Humidity: ${s.avg_humidity}%
+                               &nbsp;|&nbsp; Period: ${v.period.start} → ${v.period.end}
+                               &nbsp;|&nbsp; <a href="/satellite">View full satellite page →</a></p>
+                        `;
+                    } catch (err) {
+                        document.getElementById("vegetation-data").innerHTML = `<p style="color:var(--text-light);">Satellite data unavailable: ${err.message}</p>`;
+                    }
+                }
+                loadVegetationData();
+
+            } catch (err) {
+                document.getElementById("content").innerHTML = `<div class="alert alert-error">Failed to load tree: ${err.message}</div>`;
+            }
+        }
+
+        loadTreeDetail();
+    </script>
+</body>
+</html>

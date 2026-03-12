@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Management — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .tree-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .tree-header .actions { display: flex; gap: 0.5rem; }
+        .tree-count { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .filter-section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; width: 100%; margin-bottom: -0.25rem; }
+        .pagination { margin-top: 1.25rem; }
+        .pagination .page-num { font-weight: 700; color: var(--primary-dark); font-size: 0.92rem; }
+        @media (max-width: 768px) {
+            .tree-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header tree-header">
+            <div>
+                <h1>🌳 Tree Data Management</h1>
+                <p>View, add, edit, and delete tea tree records</p>
+                <div class="tree-count" id="tree-count"></div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="openAddModal()">➕ Add New Tree</button>
+            </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+            <div class="filter-section-label">🔍 Search & Filter</div>
+            <div class="form-group">
+                <label>Search</label>
+                <input type="text" id="search" class="form-control" placeholder="ID or location...">
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="filter-location" class="form-control" placeholder="Location name">
+            </div>
+            <div class="form-group">
+                <label>Min Elevation</label>
+                <input type="number" id="filter-min-elev" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>Max Elevation</label>
+                <input type="number" id="filter-max-elev" class="form-control" placeholder="5000">
+            </div>
+            <div class="form-group">
+                <label>Min Diameter</label>
+                <input type="number" id="filter-min-diam" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>Max Diameter</label>
+                <input type="number" id="filter-max-diam" class="form-control" placeholder="500">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="loadTrees()">🔍 Apply</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Clear</button>
+        </div>
+
+        <!-- Tree table -->
+        <div class="card"><div class="table-scroll">
+            <table class="data-table" id="tree-table">
+                <thead>
+                    <tr>
+                        <th>Tree ID</th>
+                        <th>Location</th>
+                        <th>Height (m)</th>
+                        <th>Diameter (cm)</th>
+                        <th>Ring Count</th>
+                        <th>Elevation (m)</th>
+                        <th>Lat / Lon</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tree-tbody"></tbody>
+            </table>
+        </div></div>
+
+        <div class="pagination">
+            <button class="btn btn-secondary btn-sm" id="btn-prev" onclick="prevPage()">← Previous</button>
+            <span class="page-num" id="page-info">Page 1</span>
+            <button class="btn btn-secondary btn-sm" id="btn-next" onclick="nextPage()">Next →</button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal-overlay" id="tree-modal">
+        <div class="modal">
+            <h2 id="modal-title">Add New Tree</h2>
+            <div id="modal-alert"></div>
+            <form id="tree-form">
+                <input type="hidden" id="edit-tree-id">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Height (m)</label>
+                        <input type="number" step="0.01" id="f-height" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Diameter (cm)</label>
+                        <input type="number" step="0.01" id="f-diameter" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ring Count</label>
+                        <input type="number" id="f-ring-count" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Elevation (m)</label>
+                        <input type="number" step="0.01" id="f-elevation" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Latitude</label>
+                        <input type="number" step="0.000001" id="f-latitude" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude</label>
+                        <input type="number" step="0.000001" id="f-longitude" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <input type="text" id="f-location" class="form-control" required>
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Trees");
+
+        let currentPage = 0;
+        const pageSize = 50;
+
+        function buildQueryString() {
+            const params = new URLSearchParams();
+            params.set("skip", currentPage * pageSize);
+            params.set("limit", pageSize);
+
+            const search = document.getElementById("search").value;
+            const loc = document.getElementById("filter-location").value;
+            const minElev = document.getElementById("filter-min-elev").value;
+            const maxElev = document.getElementById("filter-max-elev").value;
+            const minDiam = document.getElementById("filter-min-diam").value;
+            const maxDiam = document.getElementById("filter-max-diam").value;
+
+            if (search) params.set("search", search);
+            if (loc) params.set("location_name", loc);
+            if (minElev) params.set("min_elevation", minElev);
+            if (maxElev) params.set("max_elevation", maxElev);
+            if (minDiam) params.set("min_diameter", minDiam);
+            if (maxDiam) params.set("max_diameter", maxDiam);
+
+            return params.toString();
+        }
+
+        async function loadTrees() {
+            const tbody = document.getElementById("tree-tbody");
+            tbody.innerHTML = `<tr><td colspan="8"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>`;
+
+            try {
+                const trees = await apiGet(`/api/trees?${buildQueryString()}`);
+                
+                if (trees.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem;">No trees found. Try adjusting your filters.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = trees.map(t => `
+                    <tr>
+                        <td><a href="/tree/${t.tree_id}" title="${t.tree_id}">${t.tree_id.substring(0, 8)}...</a></td>
+                        <td>${t.location_name}</td>
+                        <td>${roundNum(t.height)}</td>
+                        <td>${roundNum(t.diameter)}</td>
+                        <td>${t.ring_count != null ? t.ring_count : '—'}</td>
+                        <td>${roundNum(t.elevation)}</td>
+                        <td>${roundNum(t.latitude, 4)}, ${roundNum(t.longitude, 4)}</td>
+                        <td style="white-space:nowrap;">
+                            <button class="btn btn-secondary btn-sm" onclick='editTree(${JSON.stringify(t)})'>✏️ Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteTree('${t.tree_id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `).join("");
+
+                const countEl = document.getElementById("tree-count");
+                countEl.textContent = trees.length === pageSize ? `Showing ${pageSize}+ results` : `Showing ${trees.length} result${trees.length !== 1 ? 's' : ''}`;
+                document.getElementById("page-info").textContent = `Page ${currentPage + 1}`;
+                document.getElementById("btn-prev").disabled = currentPage === 0;
+                document.getElementById("btn-next").disabled = trees.length < pageSize;
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8"><div class="alert alert-error">${err.message}</div></td></tr>`;
+            }
+        }
+
+        function prevPage() { if (currentPage > 0) { currentPage--; loadTrees(); } }
+        function nextPage() { currentPage++; loadTrees(); }
+        function clearFilters() {
+            document.querySelectorAll(".filter-bar input").forEach(i => i.value = "");
+            currentPage = 0;
+            loadTrees();
+        }
+
+        // ── Modal ────────────────────────────
+        function openAddModal() {
+            document.getElementById("modal-title").textContent = "Add New Tree";
+            document.getElementById("tree-form").reset();
+            document.getElementById("edit-tree-id").value = "";
+            document.getElementById("tree-modal").classList.add("active");
+        }
+
+        function editTree(tree) {
+            document.getElementById("modal-title").textContent = "Edit Tree";
+            document.getElementById("edit-tree-id").value = tree.tree_id;
+            document.getElementById("f-height").value = tree.height;
+            document.getElementById("f-diameter").value = tree.diameter;
+            document.getElementById("f-ring-count").value = tree.ring_count || "";
+            document.getElementById("f-elevation").value = tree.elevation;
+            document.getElementById("f-latitude").value = tree.latitude;
+            document.getElementById("f-longitude").value = tree.longitude;
+            document.getElementById("f-location").value = tree.location_name;
+            document.getElementById("tree-modal").classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("tree-modal").classList.remove("active");
+        }
+
+        document.getElementById("tree-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const treeId = document.getElementById("edit-tree-id").value;
+            const data = {
+                height: parseFloat(document.getElementById("f-height").value),
+                diameter: parseFloat(document.getElementById("f-diameter").value),
+                ring_count: document.getElementById("f-ring-count").value ? parseInt(document.getElementById("f-ring-count").value) : null,
+                elevation: parseFloat(document.getElementById("f-elevation").value),
+                latitude: parseFloat(document.getElementById("f-latitude").value),
+                longitude: parseFloat(document.getElementById("f-longitude").value),
+                location_name: document.getElementById("f-location").value,
+            };
+
+            try {
+                if (treeId) {
+                    await apiPut(`/api/trees/${treeId}`, data);
+                } else {
+                    await apiPost("/api/trees", data);
+                }
+                closeModal();
+                loadTrees();
+            } catch (err) {
+                showAlert(document.getElementById("modal-alert"), err.message);
+            }
+        });
+
+        async function deleteTree(treeId) {
+            if (!confirm("Delete this tree record? This action cannot be undone.")) return;
+            try {
+                await apiDelete(`/api/trees/${treeId}`);
+                loadTrees();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        loadTrees();
+    </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search & Reports – Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        /* ── page-specific ─────────────────────────────── */
+        .search-bar {
+            display:flex; gap:.6rem; margin-bottom:1.5rem; flex-wrap:wrap;
+        }
+        .search-bar input {
+            flex:1; min-width:240px; padding:.65rem 1rem; border:1px solid var(--border);
+            border-radius:8px; font-size:1rem; transition:border .2s;
+        }
+        .search-bar input:focus { border-color:var(--primary); outline:none; }
+        .search-bar select {
+            padding:.55rem .8rem; border:1px solid var(--border); border-radius:8px; font-size:.9rem;
+        }
+
+        /* results table */
+        .res-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+        .res-table th { text-align:left; padding:.6rem; border-bottom:2px solid var(--border); color:var(--text-light); font-weight:600; text-transform:uppercase; font-size:.74rem; letter-spacing:.04em; }
+        .res-table td { padding:.55rem .6rem; border-bottom:1px solid var(--border); }
+        .res-table tr:hover td { background:var(--accent-light); cursor:pointer; }
+        .res-count { font-size:.85rem; color:var(--text-light); margin-bottom:.5rem; }
+
+        /* report section */
+        .report-controls { display:flex; gap:.8rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .report-controls .field { display:flex; flex-direction:column; gap:.3rem; }
+        .report-controls label { font-size:.8rem; font-weight:600; color:var(--text-light); text-transform:uppercase; }
+        .report-controls select, .report-controls input { padding:.55rem .8rem; border:1px solid var(--border); border-radius:8px; font-size:.9rem; }
+
+        /* report output */
+        .report-out { background:var(--bg); border-radius:10px; padding:1.4rem; margin-top:1rem; }
+        .report-out h4 { margin-bottom:.6rem; color:var(--primary-dark); }
+        .kv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.8rem; margin:.8rem 0 1.2rem; }
+        .kv-item { background:#fff; padding:.7rem; border-radius:8px; box-shadow:var(--shadow); text-align:center; }
+        .kv-item .kv-val { font-size:1.3rem; font-weight:800; color:var(--primary); }
+        .kv-item .kv-lbl { font-size:.72rem; text-transform:uppercase; color:var(--text-light); margin-top:.2rem; }
+        .loc-table { width:100%; border-collapse:collapse; font-size:.85rem; margin-top:.5rem; }
+        .loc-table th { text-align:left; padding:.5rem; border-bottom:2px solid var(--border); font-size:.74rem; text-transform:uppercase; color:var(--text-light); }
+        .loc-table td { padding:.5rem; border-bottom:1px solid var(--border); }
+
+        /* history */
+        .hist-list { list-style:none; }
+        .hist-list li { padding:.6rem .8rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:.88rem; }
+        .hist-list li:hover { background:var(--accent-light); }
+
+        /* tabs */
+        .tab-bar { display:flex; gap:0; margin-bottom:1.5rem; border-bottom:2px solid var(--border); }
+        .tab-btn { padding:.65rem 1.4rem; font-size:.9rem; font-weight:600; cursor:pointer; border:none; background:none; color:var(--text-light); border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; }
+        .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; }
+
+        @media (max-width:768px) {
+            .kv-grid { grid-template-columns:1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div id="navbar"></div>
+
+<div class="container">
+    <div class="page-header">
+        <h1>🔍 Smart Search & Reports</h1>
+        <p class="subtitle">Full-text search across trees, generate comprehensive research reports</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('search')">🔎 Search</button>
+        <button class="tab-btn" onclick="switchTab('report')">📄 Generate Report</button>
+        <button class="tab-btn" onclick="switchTab('history')">📚 Report History</button>
+    </div>
+
+    <!-- ═══ Search Tab ═══ -->
+    <div id="tab-search" class="tab-panel active">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search trees by location, ID, elevation range (e.g. 1000-2000)…" onkeydown="if(event.key==='Enter') doSearch()">
+            <select id="searchCategory">
+                <option value="">All fields</option>
+                <option value="location">Location</option>
+                <option value="tree_id">Tree ID</option>
+                <option value="elevation">Elevation</option>
+            </select>
+            <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        </div>
+        <div id="searchResults"></div>
+    </div>
+
+    <!-- ═══ Report Tab ═══ -->
+    <div id="tab-report" class="tab-panel">
+        <div class="report-controls">
+            <div class="field">
+                <label>Scope</label>
+                <select id="reportScope">
+                    <option value="summary">Summary</option>
+                    <option value="full" selected>Full</option>
+                    <option value="location">By Location</option>
+                </select>
+            </div>
+            <div class="field" id="locField" style="display:none;">
+                <label>Location</label>
+                <input type="text" id="reportLocation" placeholder="e.g. Menghai">
+            </div>
+            <button class="btn btn-primary" onclick="generateReport()">📄 Generate</button>
+        </div>
+        <div id="reportOutput"></div>
+    </div>
+
+    <!-- ═══ History Tab ═══ -->
+    <div id="tab-history" class="tab-panel">
+        <div id="historyList"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+if (!requireAuth()) throw "";
+document.getElementById("navbar").innerHTML = renderNavbar("Reports");
+
+function escapeHtml(s) {
+    const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML;
+}
+
+/* ─── Tabs ────────────────────────────────────────────────── */
+function switchTab(name) {
+    document.querySelectorAll(".tab-btn").forEach((b, i) => b.classList.toggle("active", b.textContent.toLowerCase().includes(name.toLowerCase().slice(0,4))));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.getElementById("tab-" + name).classList.add("active");
+    if (name === "history") loadHistory();
+}
+
+document.getElementById("reportScope").addEventListener("change", e => {
+    document.getElementById("locField").style.display = e.target.value === "location" ? "" : "none";
+});
+
+/* ─── Search ──────────────────────────────────────────────── */
+async function doSearch() {
+    const q = document.getElementById("searchInput").value.trim();
+    const cat = document.getElementById("searchCategory").value;
+    const box = document.getElementById("searchResults");
+    if (!q) { box.innerHTML = "<p>Enter a search query.</p>"; return; }
+    box.innerHTML = '<div class="loading"><div class="spinner"></div> Searching…</div>';
+
+    try {
+        const params = new URLSearchParams({ q });
+        if (cat) params.set("category", cat);
+        const data = await apiGet(`/api/reports/search?${params}`);
+        const results = data.results || [];
+
+        if (!results.length) { box.innerHTML = `<p class="res-count">No results for "<strong>${escapeHtml(q)}</strong>"</p>`; return; }
+
+        const rows = results.map(t => `<tr onclick="window.location='/tree/${encodeURIComponent(t.tree_id)}'">
+            <td><strong>${escapeHtml(t.tree_id)}</strong></td>
+            <td>${escapeHtml(t.location_name)}</td>
+            <td>${t.elevation != null ? t.elevation + ' m' : '—'}</td>
+            <td>${t.height != null ? t.height + ' m' : '—'}</td>
+            <td>${t.diameter != null ? t.diameter + ' cm' : '—'}</td>
+            <td>${t.ring_count ?? '—'}</td>
+        </tr>`).join("");
+
+        box.innerHTML = `
+            <p class="res-count">${data.count} result(s) for "<strong>${escapeHtml(data.query)}</strong>" in <em>${escapeHtml(data.category)}</em></p>
+            <table class="res-table">
+                <thead><tr><th>Tree ID</th><th>Location</th><th>Elevation</th><th>Height</th><th>Diameter</th><th>Rings</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    } catch (e) {
+        box.innerHTML = `<p style="color:var(--danger)">Error: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+/* ─── Report Generation ───────────────────────────────────── */
+async function generateReport() {
+    const scope = document.getElementById("reportScope").value;
+    const loc = document.getElementById("reportLocation").value.trim();
+    const box = document.getElementById("reportOutput");
+    box.innerHTML = '<div class="loading"><div class="spinner"></div> Generating report…</div>';
+
+    try {
+        const params = new URLSearchParams({ scope });
+        if (scope === "location" && loc) params.set("location", loc);
+        const r = await apiGet(`/api/reports/generate?${params}`);
+
+        const ov = r.overview;
+        let html = `<div class="report-out">
+            <h4>📋 Report: ${escapeHtml(r.scope.toUpperCase())} ${r.filter_location ? '— ' + escapeHtml(r.filter_location) : ''}</h4>
+            <p style="font-size:.82rem;color:var(--text-light);">Generated ${escapeHtml(r.generated_at)} by ${escapeHtml(r.generated_by)} &nbsp;|&nbsp; ID: ${escapeHtml(r.report_id)}</p>
+
+            <h4 style="margin-top:1rem;">Overview</h4>
+            <div class="kv-grid">
+                <div class="kv-item"><div class="kv-val">${ov.total_trees}</div><div class="kv-lbl">Total Trees</div></div>
+                <div class="kv-item"><div class="kv-val">${ov.total_locations}</div><div class="kv-lbl">Locations</div></div>
+                <div class="kv-item"><div class="kv-val">${ov.avg_height_m} m</div><div class="kv-lbl">Avg Height</div></div>
+                <div class="kv-item"><div class="kv-val">${ov.avg_diameter_cm} cm</div><div class="kv-lbl">Avg Diameter</div></div>
+                <div class="kv-item"><div class="kv-val">${ov.avg_elevation_m} m</div><div class="kv-lbl">Avg Elevation</div></div>
+                <div class="kv-item"><div class="kv-val">${ov.elevation_range.min}–${ov.elevation_range.max} m</div><div class="kv-lbl">Elevation Range</div></div>
+                <div class="kv-item"><div class="kv-val">${ov.avg_ring_count}</div><div class="kv-lbl">Avg Ring Count</div></div>
+            </div>`;
+
+        /* Environmental summary */
+        const env = r.environmental_summary;
+        if (env && env.total_records) {
+            html += `<h4>Environmental Summary</h4>
+                <div class="kv-grid">
+                    <div class="kv-item"><div class="kv-val">${env.total_records}</div><div class="kv-lbl">Records</div></div>
+                    <div class="kv-item"><div class="kv-val">${env.avg_temperature ?? '—'} °C</div><div class="kv-lbl">Avg Temp</div></div>
+                    <div class="kv-item"><div class="kv-val">${env.avg_humidity ?? '—'}%</div><div class="kv-lbl">Avg Humidity</div></div>
+                    <div class="kv-item"><div class="kv-val">${env.avg_wind_speed ?? '—'} m/s</div><div class="kv-lbl">Avg Wind</div></div>
+                    <div class="kv-item"><div class="kv-val">${env.avg_co2_level ?? '—'} ppm</div><div class="kv-lbl">Avg CO₂</div></div>
+                </div>`;
+        }
+
+        /* Health summary */
+        const h = r.health_summary;
+        if (h && h.trees_checked) {
+            html += `<h4>Health Summary</h4>
+                <div class="kv-grid">
+                    <div class="kv-item"><div class="kv-val">${h.trees_checked}</div><div class="kv-lbl">Trees Checked</div></div>
+                    <div class="kv-item"><div class="kv-val">${h.avg_health_score}</div><div class="kv-lbl">Avg Health Score</div></div>
+                    <div class="kv-item"><div class="kv-val">${h.healthy_trees}</div><div class="kv-lbl">Healthy Trees</div></div>
+                </div>`;
+        }
+
+        /* Location breakdown */
+        const locs = r.location_breakdown;
+        if (locs && Object.keys(locs).length) {
+            const locRows = Object.entries(locs).sort((a,b) => b[1].tree_count - a[1].tree_count)
+                .map(([name, d]) => `<tr>
+                    <td><strong>${escapeHtml(name)}</strong></td>
+                    <td>${d.tree_count}</td>
+                    <td>${d.avg_height} m</td>
+                    <td>${d.avg_diameter} cm</td>
+                    <td>${d.avg_elevation} m</td>
+                    <td>${d.elevation_range[0]}–${d.elevation_range[1]} m</td>
+                </tr>`).join("");
+            html += `<h4>Location Breakdown</h4>
+                <table class="loc-table">
+                    <thead><tr><th>Location</th><th>Trees</th><th>Avg Height</th><th>Avg Diameter</th><th>Avg Elev</th><th>Elev Range</th></tr></thead>
+                    <tbody>${locRows}</tbody>
+                </table>`;
+        }
+
+        html += `<div class="print-export-bar"><button class="btn btn-primary" onclick="printReport()">🖨️ Print Report</button></div></div>`;
+        box.innerHTML = html;
+    } catch (e) {
+        box.innerHTML = `<p style="color:var(--danger)">Error: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function printReport() {
+    const content = document.getElementById("reportOutput").innerHTML;
+    const win = window.open("", "_blank");
+    win.document.write(`<html><head><title>Tea Tree Report</title><style>body{font-family:sans-serif;padding:2rem;} table{border-collapse:collapse;width:100%;} th,td{text-align:left;padding:.4rem .6rem;border-bottom:1px solid #ccc;} .kv-grid{display:flex;flex-wrap:wrap;gap:.8rem;margin:.8rem 0;} .kv-item{border:1px solid #ddd;border-radius:6px;padding:.6rem;text-align:center;min-width:150px;} .kv-val{font-size:1.2rem;font-weight:bold;} .kv-lbl{font-size:.75rem;color:#666;}</style></head><body>${content}</body></html>`);
+    win.document.close();
+    win.print();
+}
+
+/* ─── Report History ──────────────────────────────────────── */
+async function loadHistory() {
+    const box = document.getElementById("historyList");
+    box.innerHTML = '<div class="loading"><div class="spinner"></div> Loading…</div>';
+    try {
+        const list = await apiGet("/api/reports/history?limit=30");
+        if (!list.length) { box.innerHTML = "<p>No reports generated yet.</p>"; return; }
+
+        const items = list.map(r => `<li>
+            <span><strong>${escapeHtml(r.scope)}</strong>${r.location ? ' — ' + escapeHtml(r.location) : ''} &nbsp; (${r.tree_count} trees)</span>
+            <span style="color:var(--text-light);font-size:.82rem;">${formatDate(r.generated_at)}</span>
+        </li>`).join("");
+        box.innerHTML = `<ul class="hist-list">${items}</ul>`;
+    } catch (e) {
+        box.innerHTML = `<p style="color:var(--danger)">Error: ${escapeHtml(e.message)}</p>`;
+    }
+}
+</script>
+</body>
+</html>

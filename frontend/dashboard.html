@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <style>
+        /* Dashboard-specific overrides */
+        .dash-stats {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .dash-stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.35rem 1rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform var(--transition), box-shadow var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .dash-stat:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        .dash-stat::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+        }
+        .dash-stat:nth-child(1)::before { background: linear-gradient(90deg, #2d6a4f, #52b788); }
+        .dash-stat:nth-child(2)::before { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+        .dash-stat:nth-child(3)::before { background: linear-gradient(90deg, #7c3aed, #c084fc); }
+        .dash-stat:nth-child(4)::before { background: linear-gradient(90deg, #ea580c, #fb923c); }
+        .dash-stat:nth-child(5)::before { background: linear-gradient(90deg, #1565c0, #64b5f6); }
+        .dash-stat .stat-icon { font-size: 1.6rem; margin-bottom: 0.5rem; line-height: 1; }
+        .dash-stat .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            line-height: 1.2;
+            letter-spacing: -0.03em;
+        }
+        .dash-stat .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+        }
+        .chart-card { transition: transform var(--transition), box-shadow var(--transition); }
+        .chart-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .canvas-wrap { position: relative; width: 100%; height: 380px; }
+        .env-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+        }
+        .env-stat {
+            background: linear-gradient(135deg, var(--accent-light), #fff);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            text-align: center;
+            transition: transform var(--transition);
+        }
+        .env-stat:hover { transform: translateY(-2px); }
+        .env-stat .ev { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .env-stat .el { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .health-mini {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+        .health-mini .hm {
+            padding: 0.85rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: transform var(--transition);
+        }
+        .health-mini .hm:hover { transform: scale(1.03); }
+        .health-mini .hm .hv { font-size: 1.4rem; font-weight: 800; line-height: 1.2; }
+        .health-mini .hm .hl { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.2rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.04em; }
+        .alert-row {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.65rem 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+            transition: background var(--transition);
+            border-radius: 6px;
+        }
+        .alert-row:last-of-type { border-bottom: none; }
+        .alert-row:hover { background: var(--accent-light); }
+        .alert-row .ar-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .alert-row .ar-title { font-weight: 600; font-size: 0.82rem; color: var(--text); }
+        .alert-row .ar-meta { font-size: 0.72rem; color: var(--text-muted); }
+        @media (max-width: 900px) {
+            .dash-stats { grid-template-columns: repeat(3, 1fr); }
+            .env-row { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .dash-stats { grid-template-columns: repeat(2, 1fr); }
+            .env-row { grid-template-columns: repeat(2, 1fr); }
+            .dash-stat .stat-value { font-size: 1.4rem; }
+            .health-mini { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📊 Dashboard</h1>
+            <p>Overview of wild tea tree datasets and key metrics</p>
+        </div>
+
+        <!-- Stat cards -->
+        <div class="dash-stats" id="stats-grid">
+            <div class="dash-stat">
+                <div class="stat-icon">🌳</div>
+                <div class="stat-value" id="total-trees">—</div>
+                <div class="stat-label">Total Trees</div>
+            </div>
+            <div class="dash-stat">
+                <div class="stat-icon">📏</div>
+                <div class="stat-value" id="avg-height">—</div>
+                <div class="stat-label">Avg Height (m)</div>
+            </div>
+            <div class="dash-stat">
+                <div class="stat-icon">🔵</div>
+                <div class="stat-value" id="avg-diameter">—</div>
+                <div class="stat-label">Avg Diameter (cm)</div>
+            </div>
+            <div class="dash-stat">
+                <div class="stat-icon">⛰️</div>
+                <div class="stat-value" id="avg-elevation">—</div>
+                <div class="stat-label">Avg Elevation (m)</div>
+            </div>
+            <div class="dash-stat">
+                <div class="stat-icon">📍</div>
+                <div class="stat-value" id="location-count">—</div>
+                <div class="stat-label">Locations</div>
+            </div>
+        </div>
+
+        <!-- Charts row 1 -->
+        <div class="section-title">📊 Distribution Analysis</div>
+        <div class="grid-2">
+            <div class="card chart-card">
+                <div class="card-title">🌳 Tree Distribution by Location</div>
+                <div class="chart-container" id="chart-location-dist"></div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-title">📏 Diameter Distribution</div>
+                <div class="chart-container" id="chart-diameter-hist"></div>
+            </div>
+        </div>
+
+        <!-- Charts row 2 -->
+        <div class="section-title">📈 Correlation & Frequency</div>
+        <div class="grid-2">
+            <div class="card chart-card">
+                <div class="card-title">⛰️ Elevation vs Diameter</div>
+                <div class="chart-container" id="chart-elev-diam"></div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-title">🔄 Ring Count Distribution</div>
+                <div class="canvas-wrap">
+                    <canvas id="chart-ring-count"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Environmental summary -->
+        <div class="section-title">🌡️ Environmental Monitoring</div>
+        <div class="card">
+            <div class="card-title">🌡️ Environmental Data Summary</div>
+            <div id="env-summary"></div>
+        </div>
+
+        <!-- Health & Alerts Row -->
+        <div class="section-title">🏥 Health & Alerts</div>
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">🔬 Health Overview</div>
+                <div id="health-overview"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">🔔 Recent Alerts</div>
+                <div id="alert-widget"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Dashboard");
+
+        async function loadDashboard() {
+            try {
+                // Load stats
+                const summary = await apiGet("/api/analytics/summary");
+                document.getElementById("total-trees").textContent = summary.total_trees;
+                document.getElementById("avg-height").textContent = roundNum(summary.avg_height);
+                document.getElementById("avg-diameter").textContent = roundNum(summary.avg_diameter);
+                document.getElementById("avg-elevation").textContent = roundNum(summary.avg_elevation, 0);
+                document.getElementById("location-count").textContent = Object.keys(summary.location_counts).length;
+
+                // Location distribution pie chart (ECharts)
+                const locChart = echarts.init(document.getElementById("chart-location-dist"));
+                const locData = Object.entries(summary.location_counts)
+                    .map(([name, val]) => ({ name, value: val }))
+                    .sort((a, b) => b.value - a.value);
+                locChart.setOption({
+                    tooltip: { trigger: "item", formatter: "{b}<br/>{c} trees ({d}%)", backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", textStyle: { color: "#333" } },
+                    legend: { type: "scroll", bottom: 0, textStyle: { fontSize: 11 }, pageIconColor: "#2d6a4f" },
+                    series: [{
+                        type: "pie",
+                        radius: ["38%", "68%"],
+                        center: ["50%", "45%"],
+                        avoidLabelOverlap: true,
+                        itemStyle: { borderRadius: 8, borderColor: "#fff", borderWidth: 3 },
+                        label: { show: false },
+                        emphasis: {
+                            label: { show: true, fontSize: 13, fontWeight: "bold" },
+                            itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: "rgba(0,0,0,0.15)" },
+                        },
+                        data: locData,
+                    }],
+                    color: ["#2d6a4f","#40916c","#52b788","#74c69d","#95d5b2","#b7e4c7","#d8f3dc","#1b4332","#081c15","#368f67","#a0d8b8","#c5e8d5"],
+                    animationDuration: 800,
+                });
+
+                // Diameter histogram (ECharts)
+                const distData = await apiGet("/api/analytics/distribution?variable=diameter&bins=12");
+                const diamChart = echarts.init(document.getElementById("chart-diameter-hist"));
+                diamChart.setOption({
+                    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", textStyle: { color: "#333" } },
+                    xAxis: {
+                        type: "category",
+                        data: distData.histogram.map(h => `${Math.round(h.bin_start)}-${Math.round(h.bin_end)}`),
+                        axisLabel: { rotate: 40, fontSize: 10, color: "#666" },
+                        name: "Diameter (cm)", nameLocation: "center", nameGap: 45,
+                        nameTextStyle: { fontSize: 12, color: "#555" },
+                        axisLine: { lineStyle: { color: "#ccc" } },
+                    },
+                    yAxis: {
+                        type: "value", name: "Count",
+                        nameTextStyle: { fontSize: 12, color: "#555" },
+                        axisLine: { show: false }, axisTick: { show: false },
+                        splitLine: { lineStyle: { type: "dashed", color: "#eee" } },
+                    },
+                    series: [{
+                        type: "bar",
+                        data: distData.histogram.map(h => h.count),
+                        itemStyle: {
+                            borderRadius: [6, 6, 0, 0],
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: "#52b788" },
+                                { offset: 1, color: "#2d6a4f" },
+                            ]),
+                        },
+                        emphasis: { itemStyle: { color: "#1b4332" } },
+                        barMaxWidth: 40,
+                    }],
+                    grid: { left: 50, right: 20, bottom: 65, top: 30 },
+                    animationDuration: 700,
+                });
+
+                // Elevation vs Diameter scatter (ECharts)
+                const trees = await apiGet("/api/trees?limit=500");
+                const scatterChart = echarts.init(document.getElementById("chart-elev-diam"));
+                scatterChart.setOption({
+                    tooltip: {
+                        formatter: p => `<strong>${p.data[2] || ''}</strong><br/>Elevation: ${p.value[0]}m<br/>Diameter: ${p.value[1]}cm`,
+                        backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", textStyle: { color: "#333" },
+                    },
+                    xAxis: {
+                        type: "value", name: "Elevation (m)", nameLocation: "center", nameGap: 35,
+                        nameTextStyle: { fontSize: 12, color: "#555" },
+                        axisLine: { lineStyle: { color: "#ccc" } },
+                        splitLine: { lineStyle: { type: "dashed", color: "#f0f0f0" } },
+                    },
+                    yAxis: {
+                        type: "value", name: "Diameter (cm)", nameLocation: "center", nameGap: 45,
+                        nameTextStyle: { fontSize: 12, color: "#555" },
+                        axisLine: { show: false },
+                        splitLine: { lineStyle: { type: "dashed", color: "#f0f0f0" } },
+                    },
+                    series: [{
+                        type: "scatter",
+                        data: trees.map(t => [t.elevation, t.diameter, t.location_name]),
+                        symbolSize: val => Math.max(6, Math.min(18, val[1] / 8)),
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                { offset: 0, color: "rgba(45,106,79,0.7)" },
+                                { offset: 1, color: "rgba(82,183,136,0.7)" },
+                            ]),
+                            borderColor: "#2d6a4f",
+                            borderWidth: 1,
+                        },
+                        emphasis: { itemStyle: { borderWidth: 2, shadowBlur: 8, shadowColor: "rgba(45,106,79,0.3)" } },
+                    }],
+                    grid: { left: 55, right: 20, bottom: 50, top: 20 },
+                    animationDuration: 800,
+                });
+
+                // Ring count bar chart (Chart.js) — now inside wrapper div
+                const ringData = await apiGet("/api/analytics/distribution?variable=ring_count&bins=10");
+                const ctx = document.getElementById("chart-ring-count").getContext("2d");
+                new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: ringData.histogram.map(h => `${Math.round(h.bin_start)}–${Math.round(h.bin_end)}`),
+                        datasets: [{
+                            label: "Frequency",
+                            data: ringData.histogram.map(h => h.count),
+                            backgroundColor: ringData.histogram.map((_, i, arr) => {
+                                const t = i / (arr.length - 1 || 1);
+                                const r = Math.round(45 + t * 100);
+                                const g = Math.round(106 + t * 100);
+                                const b = Math.round(79 + t * 50);
+                                return `rgba(${r}, ${g}, ${b}, 0.75)`;
+                            }),
+                            borderColor: "#2d6a4f",
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            borderSkipped: false,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: "rgba(255,255,255,0.95)",
+                                titleColor: "#333", bodyColor: "#555",
+                                borderColor: "#e0e0e0", borderWidth: 1,
+                                cornerRadius: 8, padding: 10,
+                            },
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: "Ring Count Range", font: { size: 12 }, color: "#666" },
+                                grid: { display: false },
+                                ticks: { color: "#666", font: { size: 10 } },
+                            },
+                            y: {
+                                title: { display: true, text: "Frequency", font: { size: 12 }, color: "#666" },
+                                beginAtZero: true,
+                                grid: { color: "#f0f0f0", drawBorder: false },
+                                ticks: { color: "#666" },
+                            },
+                        },
+                        animation: { duration: 800 },
+                    },
+                });
+
+                // Environmental summary
+                try {
+                    const env = await apiGet("/api/environmental/summary");
+                    if (env && !env.message) {
+                        document.getElementById("env-summary").innerHTML = `
+                            <div class="env-row">
+                                <div class="env-stat"><div class="ev">🌡️ ${roundNum(env.avg_temperature)}°C</div><div class="el">Avg Temperature</div></div>
+                                <div class="env-stat"><div class="ev">💧 ${roundNum(env.avg_humidity)}%</div><div class="el">Avg Humidity</div></div>
+                                <div class="env-stat"><div class="ev">💨 ${roundNum(env.avg_wind_speed)} m/s</div><div class="el">Avg Wind Speed</div></div>
+                                <div class="env-stat"><div class="ev">🏭 ${roundNum(env.avg_co2)} ppm</div><div class="el">Avg CO₂</div></div>
+                                <div class="env-stat"><div class="ev">📋 ${env.record_count}</div><div class="el">Total Records</div></div>
+                            </div>`;
+                    } else {
+                        document.getElementById("env-summary").innerHTML = '<p style="color:var(--text-light);padding:1rem 0;">No environmental data yet. Add sensor readings to see summaries.</p>';
+                    }
+                } catch { 
+                    document.getElementById("env-summary").innerHTML = '<p style="color:var(--text-light);padding:1rem 0;">No environmental data available.</p>';
+                }
+
+                // Handle resize
+                window.addEventListener("resize", () => {
+                    locChart.resize();
+                    diamChart.resize();
+                    scatterChart.resize();
+                });
+
+                // Load health overview
+                try {
+                    const health = await apiGet("/api/health/summary");
+                    if (health.total_checked > 0) {
+                        const sc = health.avg_score;
+                        const scoreColor = sc >= 80 ? "#2e7d32" : sc >= 60 ? "#558b2f" : sc >= 40 ? "#f9a825" : "#d32f2f";
+                        const barW = Math.max(5, Math.min(100, sc));
+                        document.getElementById("health-overview").innerHTML = `
+                            <div style="display:flex;align-items:center;gap:1.2rem;margin-bottom:1rem;">
+                                <div style="width:70px;height:70px;border-radius:50%;border:5px solid ${scoreColor};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <span style="font-size:1.4rem;font-weight:800;color:${scoreColor};">${sc}</span>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.3rem;">Average Health Score</div>
+                                    <div class="health-bar"><div class="health-bar-fill" style="width:${barW}%;background:${scoreColor};"></div></div>
+                                </div>
+                            </div>
+                            <div class="health-mini">
+                                <div class="hm" style="background:#f0faf4;"><div class="hv" style="color:#2e7d32;">${health.healthy}</div><div class="hl">Healthy</div></div>
+                                <div class="hm" style="background:#fff8e1;"><div class="hv" style="color:#f9a825;">${health.moderate}</div><div class="hl">Moderate</div></div>
+                                <div class="hm" style="background:#fff3e0;"><div class="hv" style="color:#ff6f00;">${health.at_risk}</div><div class="hl">At Risk</div></div>
+                                <div class="hm" style="background:#fdecea;"><div class="hv" style="color:#d32f2f;">${health.unhealthy}</div><div class="hl">Unhealthy</div></div>
+                            </div>
+                            <div style="margin-top:0.75rem;text-align:center;"><span style="font-size:0.75rem;color:var(--text-light);">${health.total_checks} total check(s) across ${health.total_checked} tree(s)</span></div>
+                        `;
+                    } else {
+                        document.getElementById("health-overview").innerHTML = '<div style="padding:1.5rem 0;text-align:center;"><p style="color:var(--text-light);margin-bottom:0.5rem;">No health checks yet</p><a href="/trees" class="btn btn-sm btn-primary">Analyze a Tree →</a></div>';
+                    }
+                } catch {
+                    document.getElementById("health-overview").innerHTML = '<p style="color:var(--text-light);padding:1rem 0;">Health data unavailable.</p>';
+                }
+
+                // Load recent alerts
+                try {
+                    const alertData = await apiGet("/api/alerts?status=active&limit=5");
+                    const alerts = alertData.alerts || [];
+                    if (alerts.length > 0) {
+                        const sevIcons = { critical: "🔴", warning: "🟡", info: "🔵" };
+                        document.getElementById("alert-widget").innerHTML =
+                            alerts.map(a => `
+                                <div class="alert-row">
+                                    <span class="ar-icon">${sevIcons[a.severity] || "ℹ️"}</span>
+                                    <div style="flex:1;min-width:0;">
+                                        <div class="ar-title">${escapeHtml(a.title)}</div>
+                                        <div class="ar-meta">${escapeHtml(a.location || "")} · ${formatDate(a.created_at)}</div>
+                                    </div>
+                                    <span class="badge badge-${a.severity}" style="flex-shrink:0;">${a.severity}</span>
+                                </div>
+                            `).join("") +
+                            '<div style="margin-top:0.85rem;text-align:center;"><a href="/alerts" class="btn btn-sm btn-secondary">View All Alerts →</a></div>';
+                    } else {
+                        document.getElementById("alert-widget").innerHTML = '<div style="padding:1.5rem 0;text-align:center;"><p style="color:var(--text-light);margin-bottom:0.5rem;">No active alerts</p><a href="/alerts" class="btn btn-sm btn-primary">Run Weather Check →</a></div>';
+                    }
+                } catch {
+                    document.getElementById("alert-widget").innerHTML = '<p style="color:var(--text-light);padding:1rem 0;">Alert data unavailable.</p>';
+                }
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById("stats-grid").innerHTML = `<div class="alert alert-info" style="grid-column:1/-1;">No tree data yet. <a href="/upload">Upload data</a> or <a href="/trees">add trees</a> to get started.</div>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement("div");
+            d.textContent = text || "";
+            return d.innerHTML;
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .alerts-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; }
+        .alerts-actions { display:flex; gap:0.5rem; flex-wrap:wrap; }
+        .alert-stat-critical { border-top-color: #dc2626 !important; }
+        .alert-stat-critical .stat-value { color: #dc2626; }
+        .alert-stat-warning { border-top-color: #d97706 !important; }
+        .alert-stat-warning .stat-value { color: #d97706; }
+        .alert-stat-info { border-top-color: #0284c7 !important; }
+        .alert-stat-info .stat-value { color: #0284c7; }
+        .alert-stat-resolved { border-top-color: #16a34a !important; }
+        .alert-stat-resolved .stat-value { color: #16a34a; }
+        @media (max-width: 768px) { .alerts-header { flex-direction: column; align-items: flex-start; } }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header alerts-header">
+            <div>
+                <h1>🔔 Alerts & Notifications</h1>
+                <p>Monitor weather anomalies, health warnings, and environmental alerts</p>
+            </div>
+            <div class="alerts-actions">
+                <button class="btn btn-primary" onclick="runWeatherCheck()">⚡ Check Weather Alerts</button>
+                <button class="btn btn-secondary" onclick="loadAlerts()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Alert Summary Stats -->
+        <div class="stats-grid" id="alert-stats">
+            <div class="stat-card"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Alerts</div></div>
+            <div class="stat-card alert-stat-critical"><div class="stat-value" id="stat-critical">—</div><div class="stat-label">🔴 Critical</div></div>
+            <div class="stat-card alert-stat-warning"><div class="stat-value" id="stat-warning">—</div><div class="stat-label">🟡 Warnings</div></div>
+            <div class="stat-card alert-stat-info"><div class="stat-value" id="stat-info">—</div><div class="stat-label">🔵 Info</div></div>
+            <div class="stat-card alert-stat-resolved"><div class="stat-value" id="stat-resolved">—</div><div class="stat-label">✅ Resolved</div></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="form-group">
+                <label>📥 Status</label>
+                <select id="filter-status" class="form-control" onchange="loadAlerts()">
+                    <option value="active">Active</option>
+                    <option value="all">All</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>⚠️ Severity</label>
+                <select id="filter-severity" class="form-control" onchange="loadAlerts()">
+                    <option value="">All</option>
+                    <option value="critical">🔴 Critical</option>
+                    <option value="warning">🟡 Warning</option>
+                    <option value="info">🔵 Info</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Alert Chart -->
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">📊 Alert Distribution</div>
+                <div class="chart-container-sm" id="alert-chart"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">🗂️ Alerts by Type</div>
+                <div class="chart-container-sm" id="type-chart"></div>
+            </div>
+        </div>
+
+        <!-- Alert List -->
+        <div class="card">
+            <div class="card-title">📋 Alert List</div>
+            <div id="alert-list">
+                <div class="loading"><div class="spinner"></div> Loading alerts...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Alerts");
+
+        const severityIcons = { critical: "🔴", warning: "🟡", info: "🔵" };
+        const severityColors = { critical: "#dc2626", warning: "#d97706", info: "#0284c7" };
+
+        async function loadAlertSummary() {
+            try {
+                const summary = await apiGet("/api/alerts/summary");
+                document.getElementById("stat-total").textContent = summary.total || 0;
+                document.getElementById("stat-critical").textContent = summary.critical || 0;
+                document.getElementById("stat-warning").textContent = summary.warning || 0;
+                document.getElementById("stat-info").textContent = summary.info || 0;
+                document.getElementById("stat-resolved").textContent = summary.resolved || 0;
+
+                // Severity pie chart
+                const alertChart = echarts.init(document.getElementById("alert-chart"));
+                alertChart.setOption({
+                    tooltip: { trigger: "item" },
+                    series: [{
+                        type: "pie", radius: ["40%", "70%"],
+                        data: [
+                            { value: summary.critical || 0, name: "Critical", itemStyle: { color: "#dc2626" } },
+                            { value: summary.warning || 0, name: "Warning", itemStyle: { color: "#d97706" } },
+                            { value: summary.info || 0, name: "Info", itemStyle: { color: "#0284c7" } },
+                            { value: summary.resolved || 0, name: "Resolved", itemStyle: { color: "#16a34a" } },
+                        ],
+                        label: { show: true, formatter: "{b}: {c}", fontSize: 12 },
+                    }],
+                });
+
+                // Type bar chart
+                const byType = summary.by_type || {};
+                const typeChart = echarts.init(document.getElementById("type-chart"));
+                typeChart.setOption({
+                    tooltip: { trigger: "axis" },
+                    xAxis: { type: "category", data: Object.keys(byType), axisLabel: { rotate: 30 } },
+                    yAxis: { type: "value", name: "Count" },
+                    series: [{
+                        type: "bar",
+                        data: Object.values(byType),
+                        itemStyle: { color: "#40916c", borderRadius: [4, 4, 0, 0] },
+                    }],
+                    grid: { bottom: 60 },
+                });
+
+                window.addEventListener("resize", () => { alertChart.resize(); typeChart.resize(); });
+            } catch (err) {
+                console.error("Alert summary error:", err);
+            }
+        }
+
+        async function loadAlerts() {
+            const status = document.getElementById("filter-status").value;
+            const severity = document.getElementById("filter-severity").value;
+            let url = `/api/alerts?status=${status}&limit=100`;
+            if (severity) url += `&severity=${severity}`;
+
+            try {
+                const data = await apiGet(url);
+                const alerts = data.alerts || [];
+
+                if (alerts.length === 0) {
+                    document.getElementById("alert-list").innerHTML =
+                        '<p style="color:var(--text-light);text-align:center;padding:2rem;">No alerts found. Click "Check Weather Alerts" to scan for issues.</p>';
+                    return;
+                }
+
+                document.getElementById("alert-list").innerHTML = alerts.map(a => `
+                    <div class="alert-card ${a.severity}">
+                        <div class="alert-icon">${severityIcons[a.severity] || "ℹ️"}</div>
+                        <div class="alert-body">
+                            <h4>${escapeHtml(a.title)}</h4>
+                            <p>${escapeHtml(a.description)}</p>
+                            <div class="alert-meta">
+                                <span class="badge badge-${a.severity}">${a.severity.toUpperCase()}</span>
+                                &nbsp;·&nbsp; ${a.location || "—"}
+                                &nbsp;·&nbsp; ${a.trees_affected || 0} tree(s) affected
+                                &nbsp;·&nbsp; ${formatDate(a.created_at)}
+                                ${a.status === "resolved" ? ' &nbsp;·&nbsp; <span class="badge badge-resolved">RESOLVED</span>' : ""}
+                            </div>
+                        </div>
+                        ${a.status === "active" ? `<button class="btn btn-sm btn-secondary" onclick="resolveAlert('${a.alert_id}')">✓ Resolve</button>` : ""}
+                    </div>
+                `).join("");
+            } catch (err) {
+                document.getElementById("alert-list").innerHTML = `<div class="alert alert-error">Failed to load alerts: ${err.message}</div>`;
+            }
+        }
+
+        async function resolveAlert(alertId) {
+            try {
+                await apiPost(`/api/alerts/resolve/${alertId}`, {});
+                loadAlerts();
+                loadAlertSummary();
+            } catch (err) {
+                alert("Failed to resolve: " + err.message);
+            }
+        }
+
+        async function runWeatherCheck() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = "⏳ Checking...";
+            try {
+                const result = await apiPost("/api/alerts/check-weather", {});
+                alert(`Weather check complete!\nLocations checked: ${result.checked_locations}\nNew alerts: ${result.new_alerts}`);
+                loadAlerts();
+                loadAlertSummary();
+            } catch (err) {
+                alert("Weather check failed: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "⚡ Check Weather Alerts";
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text || "";
+            return div.innerHTML;
+        }
+
+        loadAlertSummary();
+        loadAlerts();
+    </script>
+</body>
+</html>

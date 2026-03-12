@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <style>
+        #map { height: calc(100vh - 200px); min-height: 500px; border: 1px solid var(--border); }
+        .map-controls {
+            display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end;
+            margin-bottom: 1rem; padding: 1.1rem 1.25rem;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xs);
+        }
+        .map-controls .form-group { margin-bottom: 0; min-width: 140px; }
+        .map-controls label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; }
+        .map-controls .form-control { padding: 0.5rem 0.7rem; font-size: 0.85rem; }
+        .map-count-badge { margin-left: auto; background: var(--accent-light); color: var(--primary-dark); padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
+        .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important; }
+        .leaflet-popup-content { margin: 12px 14px !important; line-height: 1.55; font-size: 13px; }
+        .leaflet-popup-content strong { color: var(--primary-dark); }
+        .leaflet-popup-content hr { border: none; border-top: 1px solid var(--border); margin: 0.4rem 0; }
+        .leaflet-popup-content a { color: var(--primary); font-weight: 600; }
+        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: rgba(45,106,79,0.2) !important; }
+        .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: var(--primary) !important; color: #fff !important; font-weight: 700; font-size: 13px; }
+        @media (max-width: 768px) {
+            .map-controls { flex-direction: column; align-items: stretch; }
+            .map-controls .form-group { min-width: 100%; }
+            .map-count-badge { margin-left: 0; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>🗺️ Tree Map Visualization</h1>
+            <p>Interactive map showing tea tree locations with clustering</p>
+        </div>
+
+        <div class="map-controls">
+            <div class="form-group">
+                <label>📍 Location</label>
+                <input type="text" id="map-location" class="form-control" placeholder="Filter by location...">
+            </div>
+            <div class="form-group">
+                <label>⬆️ Min Elevation</label>
+                <input type="number" id="map-min-elev" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>⬇️ Max Elevation</label>
+                <input type="number" id="map-max-elev" class="form-control" placeholder="5000">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="loadMapData()">🔍 Apply</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearMapFilters()">✕ Clear</button>
+            <span class="map-count-badge" id="map-count"></span>
+        </div>
+
+        <div style="position:relative;">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Map");
+
+        // Initialize map centered on Yunnan, China (common wild tea tree region)
+        const map = L.map("map").setView([23.5, 101.5], 7);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+
+        let markerCluster = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: true,
+            zoomToBoundsOnClick: true,
+        });
+        map.addLayer(markerCluster);
+
+        function getMarkerColor(elevation) {
+            if (elevation > 2500) return "#1b4332";
+            if (elevation > 2000) return "#2d6a4f";
+            if (elevation > 1500) return "#40916c";
+            if (elevation > 1000) return "#52b788";
+            return "#95d5b2";
+        }
+
+        async function loadMapData() {
+            const params = new URLSearchParams();
+            const loc = document.getElementById("map-location").value;
+            const minE = document.getElementById("map-min-elev").value;
+            const maxE = document.getElementById("map-max-elev").value;
+
+            if (loc) params.set("location_name", loc);
+            if (minE) params.set("min_elevation", minE);
+            if (maxE) params.set("max_elevation", maxE);
+
+            try {
+                const data = await apiGet(`/api/map/trees?${params}`);
+                document.getElementById("map-count").textContent = `🌳 ${data.count} trees`;
+
+                markerCluster.clearLayers();
+
+                if (data.trees.length === 0) return;
+
+                const bounds = [];
+
+                data.trees.forEach(t => {
+                    const color = getMarkerColor(t.elevation);
+                    const marker = L.circleMarker([t.latitude, t.longitude], {
+                        radius: 7,
+                        fillColor: color,
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8,
+                    });
+
+                    const hasImage = t.images && t.images.length > 0;
+                    const imageHtml = hasImage
+                        ? `<img src="${t.images[0]}" alt="Tree photo" style="width:100%;max-height:150px;object-fit:cover;border-radius:6px;margin-bottom:0.4rem;cursor:pointer;" onclick="window.open('${t.images[0]}','_blank')">
+                           ${t.images.length > 1 ? '<span style="font-size:0.75rem;color:#888;">+' + (t.images.length - 1) + ' more photo(s)</span><br>' : ''}`
+                        : `<div style="width:100%;height:80px;background:#e8f5e9;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:0.4rem;color:#999;font-size:0.8rem;">🌿 No photo</div>`;
+
+                    marker.bindPopup(`
+                        <div style="min-width:220px;max-width:260px;">
+                            ${imageHtml}
+                            <strong>🌳 ${t.location_name}</strong><br>
+                            <hr style="margin:0.3rem 0;">
+                            <b>Height:</b> ${roundNum(t.height)} m<br>
+                            <b>Diameter:</b> ${roundNum(t.diameter)} cm<br>
+                            <b>Ring Count:</b> ${t.ring_count || "—"}<br>
+                            <b>Elevation:</b> ${roundNum(t.elevation)} m<br>
+                            <b>Coords:</b> ${roundNum(t.latitude, 4)}, ${roundNum(t.longitude, 4)}<br>
+                            <a href="/tree/${t.tree_id}" style="display:inline-block;margin-top:0.3rem;">View Details →</a>
+                        </div>
+                    `, {maxWidth: 280});
+
+                    markerCluster.addLayer(marker);
+                    bounds.push([t.latitude, t.longitude]);
+                });
+
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to load map data: " + err.message);
+            }
+        }
+
+        function clearMapFilters() {
+            document.getElementById("map-location").value = "";
+            document.getElementById("map-min-elev").value = "";
+            document.getElementById("map-max-elev").value = "";
+            loadMapData();
+        }
+
+        // Add legend
+        const legend = L.control({ position: "bottomright" });
+        legend.onAdd = function () {
+            const div = L.DomUtil.create("div", "");
+            div.style.cssText = "background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.15);font-size:12px;line-height:1.75;";
+            div.innerHTML = `
+                <strong style="font-size:13px;color:#1b4332;">Elevation Legend</strong><br>
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#95d5b2;margin-right:6px;vertical-align:middle;"></span> &lt; 1000m<br>
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#52b788;margin-right:6px;vertical-align:middle;"></span> 1000–1500m<br>
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#40916c;margin-right:6px;vertical-align:middle;"></span> 1500–2000m<br>
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2d6a4f;margin-right:6px;vertical-align:middle;"></span> 2000–2500m<br>
+                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#1b4332;margin-right:6px;vertical-align:middle;"></span> &gt; 2500m
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+        loadMapData();
+    </script>
+</body>
+</html>

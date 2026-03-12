@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Data — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s var(--transition);
+            background: var(--accent-light);
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: #e8f5e9;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .upload-zone .icon { font-size: 3.5rem; margin-bottom: 0.5rem; }
+        .upload-zone h3 { margin-bottom: 0.4rem; }
+        .upload-zone p { color: var(--text-muted); font-size: 0.88rem; }
+        .sample-table { max-height: 300px; overflow-y: auto; }
+        .sample-pre {
+            background: #f0f4f1; padding: 1rem; border-radius: var(--radius);
+            overflow-x: auto; font-size: 0.8rem; border: 1px solid var(--border);
+            line-height: 1.6;
+        }
+        #file-info { margin-top: 1rem; display: none; padding: 1rem; background: var(--accent-light); border-radius: var(--radius); border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📤 Data Upload</h1>
+            <p>Bulk import tea tree data from CSV files</p>
+        </div>
+
+        <div class="grid-2">
+            <!-- CSV Upload -->
+            <div class="card">
+                <div class="card-title">📁 Upload CSV File</div>
+                <div id="alert-container"></div>
+
+                <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-file').click();">
+                    <div class="icon">📄</div>
+                    <h3>Drop CSV file here or click to browse</h3>
+                    <p>Expected columns: height, diameter, ring_count, elevation, latitude, longitude, location_name</p>
+                </div>
+                <input type="file" id="csv-file" accept=".csv" style="display:none;">
+
+                <div id="file-info">
+                    <p><strong>File:</strong> <span id="file-name"></span></p>
+                    <p><strong>Size:</strong> <span id="file-size"></span></p>
+                    <button class="btn btn-primary" onclick="uploadCSV()" id="upload-btn" style="margin-top:0.5rem;">📤 Upload & Import</button>
+                </div>
+
+                <div id="upload-result" style="margin-top:1rem;"></div>
+            </div>
+
+            <!-- Instructions & Sample -->
+            <div>
+                <div class="card">
+                    <div class="card-title">📋 CSV Format Guide</div>
+                    <p style="margin-bottom:1rem;">Your CSV file should have the following columns:</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Column</th><th>Type</th><th>Required</th><th>Example</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>height</td><td>float</td><td>✅ Yes</td><td>12.5</td></tr>
+                            <tr><td>diameter</td><td>float</td><td>✅ Yes</td><td>45.2</td></tr>
+                            <tr><td>ring_count</td><td>integer</td><td>❌ No</td><td>120</td></tr>
+                            <tr><td>elevation</td><td>float</td><td>✅ Yes</td><td>1850.5</td></tr>
+                            <tr><td>latitude</td><td>float</td><td>✅ Yes</td><td>23.4567</td></tr>
+                            <tr><td>longitude</td><td>float</td><td>✅ Yes</td><td>101.2345</td></tr>
+                            <tr><td>location_name</td><td>string</td><td>✅ Yes</td><td>Xishuangbanna</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💡 Sample CSV</div>
+                    <pre class="sample-pre">height,diameter,ring_count,elevation,latitude,longitude,location_name
+12.5,45.2,120,1850.5,23.4567,101.2345,Xishuangbanna
+8.3,32.1,80,2100.0,24.1234,100.5678,Pu'er
+15.7,62.8,200,1650.3,23.8901,101.7890,Lincang
+6.2,22.5,55,2450.0,25.0123,99.3456,Dali</pre>
+                    <button class="btn btn-secondary btn-sm" onclick="downloadSample()">⬇️ Download Sample CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Upload");
+
+        let selectedFile = null;
+        const uploadZone = document.getElementById("upload-zone");
+        const fileInput = document.getElementById("csv-file");
+
+        // Drag and drop
+        uploadZone.addEventListener("dragover", (e) => { e.preventDefault(); uploadZone.classList.add("dragover"); });
+        uploadZone.addEventListener("dragleave", () => { uploadZone.classList.remove("dragover"); });
+        uploadZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove("dragover");
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.endsWith(".csv")) {
+                showAlert(document.getElementById("alert-container"), "Please select a CSV file");
+                return;
+            }
+            selectedFile = file;
+            document.getElementById("file-name").textContent = file.name;
+            document.getElementById("file-size").textContent = (file.size / 1024).toFixed(1) + " KB";
+            document.getElementById("file-info").style.display = "block";
+        }
+
+        async function uploadCSV() {
+            if (!selectedFile) return;
+            const btn = document.getElementById("upload-btn");
+            btn.textContent = "Uploading...";
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append("file", selectedFile);
+
+                const token = getToken();
+                const res = await fetch("/api/trees/upload-csv", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Upload failed");
+                }
+
+                const result = await res.json();
+                document.getElementById("upload-result").innerHTML = `
+                    <div class="alert alert-success">
+                        ✅ Upload complete! Inserted <strong>${result.inserted}</strong> records.
+                        ${result.errors.length ? `<br>⚠️ ${result.errors.length} rows had errors.` : ""}
+                    </div>
+                    ${result.errors.length ? `
+                        <details style="margin-top:0.5rem;">
+                            <summary style="cursor:pointer;color:var(--danger);">View errors</summary>
+                            <pre style="font-size:0.8rem;margin-top:0.5rem;">${JSON.stringify(result.errors, null, 2)}</pre>
+                        </details>` : ""}
+                `;
+            } catch (err) {
+                showAlert(document.getElementById("alert-container"), err.message);
+            } finally {
+                btn.textContent = "Upload & Import";
+                btn.disabled = false;
+            }
+        }
+
+        function downloadSample() {
+            const csv = `height,diameter,ring_count,elevation,latitude,longitude,location_name
+12.5,45.2,120,1850.5,23.4567,101.2345,Xishuangbanna
+8.3,32.1,80,2100.0,24.1234,100.5678,Pu'er
+15.7,62.8,200,1650.3,23.8901,101.7890,Lincang
+6.2,22.5,55,2450.0,25.0123,99.3456,Dali
+10.1,38.6,95,1920.0,23.6789,101.4567,Menghai
+14.2,55.3,170,1780.0,23.2345,100.8901,Jingmai Mountain
+9.8,41.0,110,2050.0,24.5678,100.1234,Wuliang Mountain
+11.6,48.7,140,1900.0,23.7890,101.5678,Bulang Mountain`;
+            
+            const blob = new Blob([csv], { type: "text/csv" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "sample_tea_trees.csv";
+            a.click();
+        }
+    </script>
+</body>
+</html>

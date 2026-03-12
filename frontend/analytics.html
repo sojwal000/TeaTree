@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <style>
+        .analytics-controls {
+            display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end;
+            margin-bottom: 1.25rem; padding: 1rem 1.25rem;
+            background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border-light);
+        }
+        .analytics-controls .form-group { margin-bottom: 0; }
+        .analytics-controls label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; }
+        .analytics-controls .form-control { font-size: 0.85rem; }
+        .r2-highlight {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1.25rem; border-radius: 10px;
+            font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em;
+        }
+        .r2-good { background: #f0fdf4; color: var(--primary); border: 2px solid var(--accent); }
+        .r2-poor { background: #fef2f2; color: var(--danger); border: 2px solid #fecaca; }
+        .reg-info-panel { padding: 1.25rem; }
+        .reg-info-panel h3 { color: var(--primary-dark); font-size: 1.05rem; margin-bottom: 1rem; }
+        .reg-info-panel ul { list-style: none; padding: 0; }
+        .reg-info-panel li { padding: 0.3rem 0; border-bottom: 1px solid var(--border-light); font-size: 0.88rem; }
+        .reg-info-panel li:last-child { border-bottom: none; }
+        @media (max-width: 768px) {
+            .analytics-controls { flex-direction: column; align-items: stretch; }
+            .analytics-controls .form-control { width: 100% !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📈 Analytics Dashboard</h1>
+            <p>Correlation, regression, and statistical analysis of ecological data</p>
+        </div>
+
+        <!-- Correlation Analysis -->
+        <div class="card">
+            <div class="card-title">🔗 Correlation Analysis</div>
+            <div class="analytics-controls">
+                <div class="form-group">
+                    <label>Variables (comma-separated)</label>
+                    <input type="text" id="corr-vars" class="form-control" value="elevation,diameter,height,ring_count" style="width:350px;">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="runCorrelation()">▶ Run Analysis</button>
+            </div>
+            <div id="correlation-result"></div>
+            <div class="chart-container-lg" id="chart-correlation" style="margin-top:1rem;"></div>
+        </div>
+
+        <!-- Regression Analysis -->
+        <div class="card">
+            <div class="card-title">📐 Regression Analysis</div>
+            <div class="analytics-controls">
+                <div class="form-group">
+                    <label>Target Variable (Y)</label>
+                    <select id="reg-target" class="form-control" style="width:150px;">
+                        <option value="diameter">Diameter</option>
+                        <option value="height">Height</option>
+                        <option value="ring_count">Ring Count</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Features (X)</label>
+                    <input type="text" id="reg-features" class="form-control" value="elevation,height" style="width:250px;">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="runRegression()">▶ Run Regression</button>
+            </div>
+            <div id="regression-result"></div>
+            <div class="grid-2">
+                <div class="chart-container" id="chart-regression"></div>
+                <div id="regression-info" class="reg-info-panel"></div>
+            </div>
+        </div>
+
+        <!-- ANOVA -->
+        <div class="card">
+            <div class="card-title">📊 ANOVA Testing</div>
+            <div class="analytics-controls">
+                <div class="form-group">
+                    <label>Variable</label>
+                    <select id="anova-var" class="form-control" style="width:150px;">
+                        <option value="diameter">Diameter</option>
+                        <option value="height">Height</option>
+                        <option value="elevation">Elevation</option>
+                        <option value="ring_count">Ring Count</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Group By</label>
+                    <select id="anova-group" class="form-control" style="width:180px;">
+                        <option value="location_name">Location</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="runAnova()">▶ Run ANOVA</button>
+            </div>
+            <div id="anova-result"></div>
+            <div class="chart-container" id="chart-anova"></div>
+        </div>
+
+        <!-- Age Estimation -->
+        <div class="card">
+            <div class="card-title">🕰️ Tree Age Estimation</div>
+            <div class="analytics-controls">
+                <button class="btn btn-primary btn-sm" onclick="runAgeEstimation()">▶ Estimate Ages</button>
+            </div>
+            <div id="age-result"></div>
+            <div class="chart-container" id="chart-age"></div>
+        </div>
+
+        <!-- Scatter Matrix -->
+        <div class="card">
+            <div class="card-title">🔢 Scatter Plot Matrix</div>
+            <div class="analytics-controls">
+                <div class="form-group">
+                    <label>Variables (comma-separated)</label>
+                    <input type="text" id="scatter-vars" class="form-control" value="height,diameter,elevation,ring_count" style="width:350px;">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="loadScatterMatrix()">▶ Generate</button>
+            </div>
+            <div id="scatter-matrix" style="display:grid;gap:0.5rem;"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Analytics");
+
+        // ─── Correlation ─────────────────────────────
+        async function runCorrelation() {
+            const vars = document.getElementById("corr-vars").value;
+            const container = document.getElementById("correlation-result");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Running correlation...</div>`;
+
+            try {
+                const data = await apiGet(`/api/analytics/correlation?variables=${encodeURIComponent(vars)}`);
+                const varList = data.variables;
+                
+                // Build table
+                let html = `<p style="margin-bottom:0.75rem;color:var(--text-light);font-size:0.88rem;">Sample size: <strong>${data.sample_size}</strong></p>`;
+                html += `<div class="table-scroll"><table class="data-table"><thead><tr><th></th>`;
+                varList.forEach(v => html += `<th>${v}</th>`);
+                html += `</tr></thead><tbody>`;
+                
+                varList.forEach(row => {
+                    html += `<tr><td><strong>${row}</strong></td>`;
+                    varList.forEach(col => {
+                        const val = data.correlation_matrix[col][row];
+                        const pVal = data.p_values[row] ? data.p_values[row][col] : null;
+                        const bg = getCorrelationColor(val);
+                        const sig = pVal !== null && pVal < 0.05 ? " *" : "";
+                        html += `<td style="background:${bg};text-align:center;font-weight:600;" title="p=${pVal}">${val}${sig}</td>`;
+                    });
+                    html += `</tr>`;
+                });
+                html += `</tbody></table></div>`;
+                html += `<p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.75rem;">* indicates p &lt; 0.05 (statistically significant)</p>`;
+                container.innerHTML = html;
+
+                // Heatmap using ECharts
+                const chart = echarts.init(document.getElementById("chart-correlation"));
+                const heatData = [];
+                varList.forEach((row, i) => {
+                    varList.forEach((col, j) => {
+                        heatData.push([j, i, data.correlation_matrix[col][row]]);
+                    });
+                });
+
+                chart.setOption({
+                    tooltip: { formatter: p => `${varList[p.value[1]]} vs ${varList[p.value[0]]}: ${p.value[2]}` },
+                    xAxis: { type: "category", data: varList, axisLabel: { rotate: 30 } },
+                    yAxis: { type: "category", data: varList },
+                    visualMap: { min: -1, max: 1, inRange: { color: ["#dc2626", "#fca5a5", "#fff", "#86efac", "#16a34a"] }, orient: "horizontal", left: "center", bottom: 0, textStyle: { fontSize: 11 } },
+                    series: [{
+                        type: "heatmap",
+                        data: heatData,
+                        label: { show: true, formatter: p => p.value[2] },
+                        itemStyle: { borderColor: "#fff", borderWidth: 2 },
+                    }],
+                    grid: { bottom: 80 },
+                });
+                window.addEventListener("resize", () => chart.resize());
+
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+            }
+        }
+
+        function getCorrelationColor(val) {
+            if (val > 0.7) return "rgba(45,106,79,0.3)";
+            if (val > 0.3) return "rgba(45,106,79,0.15)";
+            if (val < -0.7) return "rgba(211,47,47,0.3)";
+            if (val < -0.3) return "rgba(211,47,47,0.15)";
+            return "transparent";
+        }
+
+        // ─── Regression ──────────────────────────────
+        async function runRegression() {
+            const target = document.getElementById("reg-target").value;
+            const features = document.getElementById("reg-features").value;
+            const container = document.getElementById("regression-result");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Running regression...</div>`;
+
+            try {
+                const data = await apiGet(`/api/analytics/regression?target=${target}&features=${encodeURIComponent(features)}`);
+                container.innerHTML = "";
+
+                // Info panel
+                const r2Class = data.r_squared > 0.5 ? 'r2-good' : 'r2-poor';
+                let infoHtml = `<h3>Regression Results</h3>`;
+                infoHtml += `<div style="margin-bottom:1rem;"><span class="r2-highlight ${r2Class}">R² = ${data.r_squared}</span></div>`;
+                infoHtml += `<p style="font-size:0.88rem;color:var(--text-light);"><strong>Sample:</strong> ${data.sample_size} &nbsp;·&nbsp; <strong>Target:</strong> ${data.target} &nbsp;·&nbsp; <strong>Features:</strong> ${data.features.join(", ")}</p>`;
+                infoHtml += `<h4 style="margin-top:1rem;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Coefficients</h4><ul>`;
+                Object.entries(data.coefficients).forEach(([k, v]) => {
+                    infoHtml += `<li><strong>${k}:</strong> ${v}</li>`;
+                });
+                infoHtml += `</ul>`;
+                document.getElementById("regression-info").innerHTML = infoHtml;
+
+                // Scatter chart: actual vs predicted
+                const chart = echarts.init(document.getElementById("chart-regression"));
+                chart.setOption({
+                    title: { text: "Actual vs Predicted", textStyle: { fontSize: 14 } },
+                    tooltip: { formatter: p => `Actual: ${p.value[0]}<br>Predicted: ${p.value[1]}` },
+                    xAxis: { type: "value", name: `Actual ${target}` },
+                    yAxis: { type: "value", name: `Predicted ${target}` },
+                    series: [
+                        {
+                            type: "scatter",
+                            data: data.scatter_data.map(d => [d[target], d.predicted]),
+                            symbolSize: 6,
+                            itemStyle: { color: "#2d6a4f", opacity: 0.5 },
+                        },
+                        {
+                            type: "line",
+                            data: (() => {
+                                const vals = data.scatter_data.map(d => d[target]);
+                                const min = Math.min(...vals);
+                                const max = Math.max(...vals);
+                                return [[min, min], [max, max]];
+                            })(),
+                            lineStyle: { color: "#d32f2f", type: "dashed", width: 2 },
+                            symbol: "none",
+                        },
+                    ],
+                });
+                window.addEventListener("resize", () => chart.resize());
+
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+            }
+        }
+
+        // ─── ANOVA ───────────────────────────────────
+        async function runAnova() {
+            const variable = document.getElementById("anova-var").value;
+            const groupBy = document.getElementById("anova-group").value;
+            const container = document.getElementById("anova-result");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Running ANOVA...</div>`;
+
+            try {
+                const data = await apiGet(`/api/analytics/anova?variable=${variable}&group_by=${groupBy}`);
+
+                let html = `
+                    <div class="stats-grid" style="margin-bottom:1rem;">
+                        <div class="stat-card">
+                            <div class="stat-value">${data.f_statistic}</div>
+                            <div class="stat-label">F-Statistic</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color:${data.significant ? 'var(--primary)' : 'var(--danger)'};">${data.p_value}</div>
+                            <div class="stat-label">P-Value</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.significant ? "✅ Yes" : "❌ No"}</div>
+                            <div class="stat-label">Significant (p<0.05)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.group_count}</div>
+                            <div class="stat-label">Groups</div>
+                        </div>
+                    </div>`;
+                container.innerHTML = html;
+
+                // Box-like chart using bar + error
+                const groups = Object.keys(data.group_summaries);
+                const means = groups.map(g => data.group_summaries[g].mean);
+                const stds = groups.map(g => data.group_summaries[g].std);
+
+                const chart = echarts.init(document.getElementById("chart-anova"));
+                chart.setOption({
+                    tooltip: {
+                        formatter: p => {
+                            const g = groups[p.dataIndex];
+                            const s = data.group_summaries[g];
+                            return `<b>${g}</b><br>Mean: ${s.mean}<br>Std: ${s.std}<br>Count: ${s.count}<br>Range: ${s.min}–${s.max}`;
+                        }
+                    },
+                    xAxis: { type: "category", data: groups, axisLabel: { rotate: 30, fontSize: 11 } },
+                    yAxis: { type: "value", name: variable },
+                    series: [{
+                        type: "bar",
+                        data: means,
+                        itemStyle: { color: "#40916c", borderRadius: [4, 4, 0, 0] },
+                        label: { show: true, position: "top", formatter: p => roundNum(p.value) },
+                    }],
+                    grid: { bottom: 80 },
+                });
+                window.addEventListener("resize", () => chart.resize());
+
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+            }
+        }
+
+        // ─── Age Estimation ──────────────────────────
+        async function runAgeEstimation() {
+            const container = document.getElementById("age-result");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Estimating ages...</div>`;
+
+            try {
+                const data = await apiGet("/api/analytics/age-estimation");
+
+                container.innerHTML = `
+                    <div class="stats-grid" style="margin-bottom:1rem;">
+                        <div class="stat-card">
+                            <div class="stat-value">${data.r_squared}</div>
+                            <div class="stat-label">R² Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.coefficient}</div>
+                            <div class="stat-label">Coefficient</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.training_size}</div>
+                            <div class="stat-label">Training Samples</div>
+                        </div>
+                    </div>
+                    <p style="color:var(--text-light);margin-bottom:1rem;">Model: ${data.model}</p>
+                `;
+
+                const chart = echarts.init(document.getElementById("chart-age"));
+                const hasActual = data.estimations.filter(e => e.actual_ring_count != null);
+
+                chart.setOption({
+                    tooltip: { formatter: p => `Diameter: ${p.value[0]}cm<br>Estimated Age: ${p.value[1]} rings` },
+                    xAxis: { type: "value", name: "Diameter (cm)" },
+                    yAxis: { type: "value", name: "Estimated Ring Count" },
+                    legend: { data: ["Estimated", "Actual"], bottom: 0 },
+                    series: [
+                        {
+                            name: "Estimated",
+                            type: "scatter",
+                            data: data.estimations.map(e => [e.diameter, e.estimated_age]),
+                            symbolSize: 6,
+                            itemStyle: { color: "#40916c", opacity: 0.5 },
+                        },
+                        {
+                            name: "Actual",
+                            type: "scatter",
+                            data: hasActual.map(e => [e.diameter, e.actual_ring_count]),
+                            symbolSize: 8,
+                            itemStyle: { color: "#d32f2f" },
+                        },
+                    ],
+                });
+                window.addEventListener("resize", () => chart.resize());
+
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+            }
+        }
+
+        // ─── Scatter Matrix ──────────────────────────
+        async function loadScatterMatrix() {
+            const vars = document.getElementById("scatter-vars").value;
+            const container = document.getElementById("scatter-matrix");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Generating scatter matrix...</div>`;
+
+            try {
+                const data = await apiGet(`/api/analytics/scatter-matrix?variables=${encodeURIComponent(vars)}`);
+                const varList = data.variables;
+                const n = varList.length;
+
+                container.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+                container.innerHTML = "";
+
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        const div = document.createElement("div");
+                        div.style.cssText = "height:200px;border:1px solid var(--border);border-radius:8px;background:#fff;overflow:hidden;";
+                        div.id = `sm-${i}-${j}`;
+                        container.appendChild(div);
+
+                        const chart = echarts.init(div);
+
+                        if (i === j) {
+                            // Diagonal: variable name label
+                            chart.setOption({
+                                graphic: [{
+                                    type: "text",
+                                    left: "center",
+                                    top: "center",
+                                    style: { text: varList[i], fontSize: 14, fontWeight: "bold", fill: "#2d6a4f" },
+                                }],
+                            });
+                        } else {
+                            // Off-diagonal: scatter
+                            chart.setOption({
+                                xAxis: { type: "value", show: i === n - 1, name: i === n - 1 ? varList[j] : "", nameLocation: "center", nameGap: 20, axisLabel: { fontSize: 9 } },
+                                yAxis: { type: "value", show: j === 0, name: j === 0 ? varList[i] : "", nameLocation: "center", nameGap: 30, axisLabel: { fontSize: 9 } },
+                                grid: { top: 5, right: 5, bottom: i === n - 1 ? 30 : 5, left: j === 0 ? 40 : 5 },
+                                series: [{
+                                    type: "scatter",
+                                    data: data.data_points.map(p => [p[varList[j]], p[varList[i]]]),
+                                    symbolSize: 4,
+                                    itemStyle: { color: "#2d6a4f", opacity: 0.4 },
+                                }],
+                            });
+                        }
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+            }
+        }
+
+        // Auto-load correlation on page load
+        runCorrelation();
+    </script>
+</body>
+</html>
