@@ -207,7 +207,7 @@ async def run_anova(
         "group_by": group_by,
         "f_statistic": round(float(f_stat), 4),
         "p_value": round(float(p_value), 6),
-        "significant": p_value < 0.05,
+        "significant": bool(p_value < 0.05),
         "group_count": len(group_data),
         "group_summaries": group_summaries,
     }
