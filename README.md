@@ -227,7 +227,7 @@ python seed_data.py
 This creates:
 - **300 sample tea trees** across 12 Yunnan locations
 - **~600 environmental records**
-- **Demo user:** `demo@teatree.org` / `demo123`
+- **Demo user:** `demo@teatree.org` / ` `
 
 ### 3. Start the server
 

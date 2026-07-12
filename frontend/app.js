@@ -105,6 +105,7 @@ function renderNavbar(activePage) {
     const pages = [
         { name: "Dashboard", href: "/dashboard", icon: "📊" },
         { name: "Trees", href: "/trees", icon: "🌳" },
+        { name: "Soil Portal", href: "/soil", icon: "🌱" },
         { name: "Map", href: "/map", icon: "🗺️" },
         { name: "Analytics", href: "/analytics", icon: "📈" },
         { name: "Satellite", href: "/satellite", icon: "🛰️" },

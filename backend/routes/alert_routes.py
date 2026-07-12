@@ -219,6 +219,8 @@ async def check_weather_alerts(
         if not existing:
             tree = await db.trees.find_one({"tree_id": h["_id"]})
             loc_name = tree.get("location_name", "Unknown") if tree else "Unknown"
+            tree_variety = tree.get("variety", "Assamica") if tree else "Assamica"
+            tree_name = tree.get("name") or f"{loc_name.split(',')[0]} {tree_variety} Tea Tree"
             new_alerts.append({
                 "alert_id": str(uuid.uuid4()),
                 "title": f"Low Health Score — Tree {h['_id'][:8]}",
@@ -228,7 +230,15 @@ async def check_weather_alerts(
                 "status": "active",
                 "location": loc_name,
                 "trees_affected": 1,
-                "metadata": {"tree_id": h["_id"], "health_score": h["latest_score"]},
+                "metadata": {
+                    "tree_id": h["_id"],
+                    "tree_name": tree_name,
+                    "location_name": loc_name,
+                    "reason": f"Low health score: {h['latest_score']:.0f}/100",
+                    "risk": "Foliar Dieback & Root Stress" if h["latest_score"] < 25 else "Under Observation",
+                    "time_label": datetime.utcnow().strftime("%H:%M"),
+                    "severity_label": "Critical" if h["latest_score"] < 25 else "Warning"
+                },
                 "created_at": datetime.utcnow(),
             })
 
@@ -240,6 +250,7 @@ async def check_weather_alerts(
             "location": alert.get("location"),
             "status": "active",
         })
+
         if not existing:
             await db.alerts.insert_one(alert)
             inserted += 1
@@ -247,7 +258,70 @@ async def check_weather_alerts(
     return {"checked_locations": len(locations), "new_alerts": inserted, "total_alerts_generated": len(new_alerts)}
 
 
+@router.get("/tree/{tree_id}")
+async def get_tree_alerts(tree_id: str):
+    """
+    Get active alerts for a specific tree or area that contains this tree.
+    """
+    db = get_database()
+    tree = await db.trees.find_one({"tree_id": tree_id})
+    if not tree:
+        raise HTTPException(status_code=404, detail="Tree not found")
+        
+    location = tree.get("location_name", "")
+    tree_name = tree.get("name") or f"{location.split(',')[0]} Assamica Tea Tree"
+    
+    # Query active alerts: either matching specific tree_id or matching location of tree
+    query = {
+        "status": "active",
+        "$or": [
+            {"metadata.tree_id": tree_id},
+            {"location": location},
+            {"metadata.area": {"$regex": f"^{location.split(',')[0]}", "$options": "i"}}
+        ]
+    }
+    
+    cursor = db.alerts.find(query, {"_id": 0}).sort("created_at", -1)
+    alerts = await cursor.to_list(length=50)
+    
+    # Enrich and format metadata to ensure exact compliance with frontend expectations
+    for a in alerts:
+        m = a.setdefault("metadata", {})
+        
+        # If it's a tree-specific health alert or if tree_id matches
+        if m.get("tree_id") == tree_id or a.get("alert_type") == "health":
+            m["tree_id"] = tree_id
+            m["tree_name"] = tree_name
+            m["location_name"] = location
+            m["reason"] = m.get("reason") or a.get("description") or a.get("title")
+            m["risk"] = m.get("risk") or "Under Observation"
+            m["time_label"] = a.get("created_at").strftime("%H:%M") if isinstance(a.get("created_at"), datetime) else "Active"
+            m["severity_label"] = a.get("severity", "Warning").capitalize()
+        else:
+            # Area-based/Regional alert
+            area_name = m.get("area") or a.get("location") or location.split(',')[0]
+            m["area"] = area_name.split(',')[0]
+            m["reason"] = m.get("reason") or a.get("description") or a.get("title")
+            m["affected_trees"] = m.get("affected_trees") or a.get("trees_affected") or 1
+            m["severity_label"] = a.get("severity", "Critical").capitalize()
+            m["time_label"] = a.get("created_at").strftime("%H:%M") if isinstance(a.get("created_at"), datetime) else "Active"
+            
+    return {"alerts": alerts}
+
+
 def _create_alert(title, severity, alert_type, description, location, trees_affected):
+    severity_label = severity.capitalize()
+    time_label = datetime.utcnow().strftime("%H:%M")
+    area_name = location.split(',')[0] if location else "Unknown"
+    
+    metadata = {
+        "area": area_name,
+        "reason": title,
+        "affected_trees": trees_affected,
+        "severity_label": severity_label,
+        "time_label": time_label
+    }
+    
     return {
         "alert_id": str(uuid.uuid4()),
         "title": title,
@@ -257,6 +331,6 @@ def _create_alert(title, severity, alert_type, description, location, trees_affe
         "status": "active",
         "location": location,
         "trees_affected": trees_affected,
-        "metadata": {},
+        "metadata": metadata,
         "created_at": datetime.utcnow(),
     }

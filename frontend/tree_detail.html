@@ -72,7 +72,66 @@
                     }
                 } catch {}
 
+                // Fetch active alerts for this specific tree
+                let alertsHtml = "";
+                try {
+                    const activeAlerts = await apiGet(`/api/alerts/tree/${treeId}`);
+                    if (activeAlerts && activeAlerts.alerts && activeAlerts.alerts.length > 0) {
+                        activeAlerts.alerts.forEach(a => {
+                            const m = a.metadata || {};
+                            const isAreaAlert = m.area && !m.tree_id;
+                            
+                            alertsHtml += `
+                                <div class="user-request-alert" style="
+                                    border: 2px solid #dc2626;
+                                    background-color: #fef2f2;
+                                    border-radius: var(--radius-md);
+                                    padding: 1.15rem;
+                                    margin-bottom: 1.25rem;
+                                    color: #991b1b;
+                                    font-family: inherit;
+                                    box-shadow: var(--shadow-sm);
+                                ">
+                                    <div style="font-weight: 900; font-size: 1.1rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; border-bottom: 1px solid #fee2e2; padding-bottom: 0.4rem;">
+                                        <span style="display:flex; align-items:center; gap:0.3rem;">🚨 ALERT</span>
+                                        <span style="font-size: 0.65rem; background: #dc2626; color: #fff; padding: 0.15rem 0.4rem; border-radius: 3px; font-weight:800; letter-spacing:0.04em;">ACTIVE</span>
+                                    </div>
+                                    <div style="display: grid; gap: 0.35rem; font-size: 0.88rem; line-height: 1.45;">
+                            `;
+                            
+                            if (isAreaAlert) {
+                                alertsHtml += `
+                                        <div><strong>Area:</strong> ${m.area}</div>
+                                        <div><strong>Reason:</strong> ${m.reason || a.title}</div>
+                                        <div><strong>Affected Trees:</strong> ${m.affected_trees || a.trees_affected || 1}</div>
+                                        <div><strong>Severity:</strong> <span style="color:#dc2626; font-weight:800;">${m.severity_label || "Critical"}</span></div>
+                                `;
+                            } else {
+                                alertsHtml += `
+                                        <div><strong>Tree:</strong> ${m.tree_name || tree.location_name.split(',')[0] + ' Assamica Tea Tree'}</div>
+                                        <div><strong>Location:</strong> ${m.location_name || tree.location_name.split(',')[0]}</div>
+                                        <div><strong>Reason:</strong> ${m.reason || a.title}</div>
+                                        <div><strong>Risk:</strong> <span style="color:#d97706; font-weight:800;">${m.risk || "Under Observation"}</span></div>
+                                        ${m.severity_label ? `<div><strong>Severity:</strong> <span style="font-weight:800; color:#dc2626;">${m.severity_label}</span></div>` : ""}
+                                        <div><strong>Time:</strong> ${m.time_label || formatDate(a.created_at)}</div>
+                                `;
+                            }
+                            
+                            alertsHtml += `
+                                    </div>
+                                    <div style="margin-top: 0.8rem; text-align: right;">
+                                        <button class="btn btn-sm" style="background:#dc2626; color:#fff; border:none; padding: 0.25rem 0.6rem; font-size:0.72rem; border-radius:4px; font-weight:700; cursor:pointer;" onclick="resolveDetailAlert('${a.alert_id}', this)">✓ Resolve Alert</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                } catch (err) {
+                    console.error("Failed to load active alerts in detail page", err);
+                }
+
                 document.getElementById("content").innerHTML = `
+                    ${alertsHtml}
                     <div class="grid-2">
                         <div class="card">
                             <div class="card-title">📋 Tree Information</div>
@@ -375,6 +434,19 @@
 
             } catch (err) {
                 document.getElementById("content").innerHTML = `<div class="alert alert-error">Failed to load tree: ${err.message}</div>`;
+            }
+        }
+
+        async function resolveDetailAlert(alertId, btn) {
+            btn.disabled = true;
+            btn.textContent = "Resolving...";
+            try {
+                await apiPost(`/api/alerts/resolve/${alertId}`, {});
+                loadTreeDetail();
+            } catch (err) {
+                alert("Failed to resolve: " + err.message);
+                btn.disabled = false;
+                btn.textContent = "✓ Resolve Alert";
             }
         }
 

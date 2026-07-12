@@ -43,6 +43,7 @@ class TreeCreate(BaseModel):
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     location_name: str = Field(..., min_length=1, max_length=200)
+    country: Optional[str] = Field("India", description="Country name")
     images: Optional[List[str]] = []
 
 
@@ -54,6 +55,7 @@ class TreeUpdate(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
     location_name: Optional[str] = Field(None, max_length=200)
+    country: Optional[str] = Field(None, max_length=100)
     images: Optional[List[str]] = None
 
 
@@ -66,6 +68,7 @@ class TreeResponse(BaseModel):
     latitude: float
     longitude: float
     location_name: str
+    country: Optional[str] = "India"
     images: List[str] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

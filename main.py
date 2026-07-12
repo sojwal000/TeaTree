@@ -19,6 +19,7 @@ from backend.routes.climate_routes import router as climate_router
 from backend.routes.satellite_routes import router as satellite_router
 from backend.routes.report_routes import router as report_router
 from backend.routes.alert_routes import router as alert_router
+from backend.routes.soil_routes import router as soil_router
 
 app = FastAPI(
     title="Wild Tea Tree Big Data Visualization Platform",
@@ -50,6 +51,7 @@ app.include_router(climate_router)
 app.include_router(satellite_router)
 app.include_router(report_router)
 app.include_router(alert_router)
+app.include_router(soil_router)
 
 # Ensure uploads directory exists
 os.makedirs("uploads", exist_ok=True)
@@ -120,3 +122,9 @@ async def serve_satellite():
 @app.get("/reports")
 async def serve_reports():
     return FileResponse(os.path.join(FRONTEND_DIR, "reports.html"))
+
+
+@app.get("/soil")
+async def serve_soil():
+    return FileResponse(os.path.join(FRONTEND_DIR, "soil.html"))
+
