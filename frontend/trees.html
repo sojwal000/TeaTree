@@ -186,6 +186,7 @@
                         <td>${roundNum(t.elevation)}</td>
                         <td>${roundNum(t.latitude, 4)}, ${roundNum(t.longitude, 4)}</td>
                         <td style="white-space:nowrap;">
+                            <a href="/tree_passport.html?id=${t.tree_id}" class="btn btn-secondary btn-sm" style="background:var(--accent-light); color:var(--primary-dark);">📱 Passport</a>
                             <button class="btn btn-secondary btn-sm" onclick='editTree(${JSON.stringify(t)})'>✏️ Edit</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteTree('${t.tree_id}')">🗑️</button>
                         </td>

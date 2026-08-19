@@ -194,7 +194,28 @@
         </div>
 
         <!-- Health & Alerts Row -->
-        <div class="section-title">🏥 Health & Alerts</div>
+        <div class="section-title">🏥 Health, Ecosystem & Conservation</div>
+        <div class="grid-2" style="margin-bottom: 2rem;">
+            <div class="card">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>🌱 Ecosystem Health Index (EHI)</span>
+                    <a href="/regions" style="font-size: 0.8rem; font-weight: 600;">Compare Regions →</a>
+                </div>
+                <div id="ehi-widget">
+                    <div class="loading"><div class="spinner"></div> Calculating Ecosystem Health Index...</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>🚨 Potential Conservation Anomalies</span>
+                    <a href="/alerts" style="font-size: 0.8rem; font-weight: 600;">View Alerts →</a>
+                </div>
+                <div id="anomaly-widget">
+                    <div class="loading"><div class="spinner"></div> Scanning conservation records...</div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid-2">
             <div class="card">
                 <div class="card-title">🔬 Health Overview</div>
@@ -429,6 +450,51 @@
                     }
                 } catch {
                     document.getElementById("health-overview").innerHTML = '<p style="color:var(--text-light);padding:1rem 0;">Health data unavailable.</p>';
+                }
+
+                // Load EHI widget
+                try {
+                    const ehi = await apiGet("/api/ecosystem/health");
+                    const ehiScore = ehi.ecosystem_health_index;
+                    const ehiSymbol = ehi.status_symbol || "🟢";
+                    document.getElementById("ehi-widget").innerHTML = `
+                        <div style="display:flex; align-items:center; gap:1rem; margin-bottom: 0.8rem;">
+                            <div style="font-size:2.2rem; font-weight:800; color:var(--primary-dark);">${ehiScore} <span style="font-size:1rem; color:var(--text-muted);">/ 100</span></div>
+                            <span class="badge" style="background:var(--accent-light); color:var(--primary-dark); font-size:0.9rem; font-weight:700;">${ehiSymbol} ${ehi.status}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-light); margin-bottom: 0.8rem;">Formula: 20% Soil + 20% Temp + 15% Hum + 15% Rain + 30% Tree Health</div>
+                        <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem; text-align:center;">
+                            <div style="background:var(--bg); padding:0.4rem; border-radius:6px;"><div style="font-size:0.7rem; color:var(--text-muted);">Soil</div><strong style="font-size:0.85rem;">${ehi.components.soil.score}</strong></div>
+                            <div style="background:var(--bg); padding:0.4rem; border-radius:6px;"><div style="font-size:0.7rem; color:var(--text-muted);">Temp</div><strong style="font-size:0.85rem;">${ehi.components.temperature.score}</strong></div>
+                            <div style="background:var(--bg); padding:0.4rem; border-radius:6px;"><div style="font-size:0.7rem; color:var(--text-muted);">Hum</div><strong style="font-size:0.85rem;">${ehi.components.humidity.score}</strong></div>
+                            <div style="background:var(--bg); padding:0.4rem; border-radius:6px;"><div style="font-size:0.7rem; color:var(--text-muted);">Rain</div><strong style="font-size:0.85rem;">${ehi.components.rainfall.score}</strong></div>
+                            <div style="background:var(--bg); padding:0.4rem; border-radius:6px;"><div style="font-size:0.7rem; color:var(--text-muted);">Tree</div><strong style="font-size:0.85rem;">${ehi.components.tree_health.score}</strong></div>
+                        </div>`;
+                } catch {
+                    document.getElementById("ehi-widget").innerHTML = '<p style="color:var(--text-light);">Ecosystem Health Index unavailable.</p>';
+                }
+
+                // Load Anomaly widget
+                try {
+                    const anomalyData = await apiGet("/api/conservation/anomalies?limit=3");
+                    const anomalies = anomalyData.anomalies || [];
+                    if (anomalies.length > 0) {
+                        document.getElementById("anomaly-widget").innerHTML = anomalies.map(a => `
+                            <div style="border-bottom:1px solid var(--border-light); padding:0.5rem 0;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <strong style="font-size:0.88rem;">${escapeHtml(a.anomaly_type)}</strong>
+                                    <span class="badge badge-${a.severity.toLowerCase()}">${a.severity}</span>
+                                </div>
+                                <div style="font-size:0.78rem; color:var(--text-light); margin-top:0.2rem;">
+                                    📍 ${escapeHtml(a.region)} • ${a.affected_count} Tree(s) Affected
+                                </div>
+                            </div>
+                        `).join("") + `<div style="margin-top:0.8rem; text-align:center;"><a href="/alerts" class="btn btn-sm btn-secondary">Review All Anomalies →</a></div>`;
+                    } else {
+                        document.getElementById("anomaly-widget").innerHTML = `<div style="text-align:center; padding:1rem; color:var(--success);">✅ No active conservation anomalies detected.</div>`;
+                    }
+                } catch {
+                    document.getElementById("anomaly-widget").innerHTML = '<p style="color:var(--text-light);">Anomaly scanner offline.</p>';
                 }
 
                 // Load recent alerts

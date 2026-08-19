@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citizen Science — Wild Tea Tree Sightings</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .citizen-container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .citizen-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+        @media (max-width: 850px) {
+            .citizen-grid { grid-template-columns: 1fr; }
+        }
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+            color: var(--text);
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color var(--transition);
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+        .gps-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 0.75rem;
+            align-items: end;
+        }
+        .btn-gps {
+            background: var(--accent-light);
+            color: var(--primary-dark);
+            border: 1px solid var(--primary-light);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-height: 44px;
+        }
+        .btn-gps:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-submit {
+            background: var(--primary);
+            color: #fff;
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background var(--transition);
+            min-height: 48px;
+        }
+        .btn-submit:hover {
+            background: var(--primary-dark);
+        }
+        .photo-preview {
+            width: 100%;
+            height: 180px;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .sighting-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-xs);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .sighting-img {
+            width: 90px;
+            height: 90px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+        }
+        .badge-pending { background: #fef3c7; color: #92400e; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .badge-validated { background: #dcfce7; color: #166534; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="citizen-container">
+        <div class="page-header" style="margin-bottom: 1.5rem;">
+            <h1>👥 Citizen Science Sighting Portal</h1>
+            <p>Empowering local villagers, farmers, trekkers, and researchers to log wild tea tree observations.</p>
+        </div>
+
+        <div class="citizen-grid">
+            <!-- Form Section -->
+            <div class="form-card">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary-dark);">📷 Submit New Sighting</h2>
+                <div id="alert-box"></div>
+                <form id="sighting-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="file">Tree Photo <span style="color:red">*</span></label>
+                        <input type="file" id="file" name="file" accept="image/*" class="form-control" required onchange="previewImage(event)">
+                        <div id="preview" class="photo-preview">
+                            <span>📷 Select or take a photo</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>GPS Location <span style="color:red">*</span></label>
+                        <div class="gps-row">
+                            <div>
+                                <input type="number" step="any" id="latitude" name="latitude" placeholder="Latitude (-90 to 90)" class="form-control" required>
+                            </div>
+                            <div>
+                                <input type="number" step="any" id="longitude" name="longitude" placeholder="Longitude (-180 to 180)" class="form-control" required>
+                            </div>
+                            <button type="button" class="btn-gps" onclick="detectGPS()">
+                                📍 Auto GPS
+                            </button>
+                        </div>
+                        <small id="gps-status" style="color: var(--text-light); margin-top: 0.25rem; display: block;"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location_name">Location / Landmark Name <span style="color:red">*</span></label>
+                        <input type="text" id="location_name" name="location_name" placeholder="e.g., Darjeeling Ridge, Forest Sector 4" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Observation Notes <span style="color:red">*</span></label>
+                        <textarea id="notes" name="notes" rows="3" placeholder="Describe tree condition, leaves, surrounding flora..." class="form-control" maxlength="1000" required></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                        <div class="form-group">
+                            <label for="tree_name">Tree Name / Species (Optional)</label>
+                            <input type="text" id="tree_name" name="tree_name" placeholder="e.g., Camellia sinensis" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="estimated_height">Est. Height (m)</label>
+                            <input type="number" step="0.1" id="estimated_height" name="estimated_height" placeholder="e.g. 10.5" class="form-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                        <div class="form-group">
+                            <label for="estimated_diameter">Est. Diameter (cm)</label>
+                            <input type="number" step="0.1" id="estimated_diameter" name="estimated_diameter" placeholder="e.g. 35.0" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="estimated_ring_count">Est. Ring Count</label>
+                            <input type="number" id="estimated_ring_count" name="estimated_ring_count" placeholder="e.g. 120" class="form-control">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">🚀 Submit Sighting for Verification</button>
+                </form>
+            </div>
+
+            <!-- Sightings List -->
+            <div>
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary-dark);">📜 Recent Community Sightings</h2>
+                <div id="sightings-container">
+                    <div class="loading"><div class="spinner"></div> Loading sightings...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        document.getElementById("navbar").innerHTML = renderNavbar("Citizen Science");
+
+        function previewImage(event) {
+            const preview = document.getElementById("preview");
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.style.backgroundImage = `url('${e.target.result}')`;
+                    preview.innerHTML = "";
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function detectGPS() {
+            const status = document.getElementById("gps-status");
+            status.textContent = "⌛ Requesting browser GPS position...";
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        document.getElementById("latitude").value = position.coords.latitude.toFixed(6);
+                        document.getElementById("longitude").value = position.coords.longitude.toFixed(6);
+                        status.textContent = "✅ GPS coordinates acquired!";
+                        status.style.color = "var(--success)";
+                    },
+                    error => {
+                        status.textContent = "❌ GPS access denied or unavailable. Please enter coordinates manually.";
+                        status.style.color = "var(--danger)";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            } else {
+                status.textContent = "❌ Geolocation API not supported by browser.";
+                status.style.color = "var(--danger)";
+            }
+        }
+
+        async function loadSightings() {
+            const container = document.getElementById("sightings-container");
+            try {
+                const res = await apiGet("/api/citizen/sightings");
+                if (!res.sightings || res.sightings.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding: 2rem; background: var(--bg-card); border-radius: var(--radius);">No community sightings submitted yet. Be the first!</div>`;
+                    return;
+                }
+
+                container.innerHTML = res.sightings.map(s => {
+                    const badgeClass = `badge-${s.validation_status}`;
+                    return `
+                    <div class="sighting-card">
+                        <img src="${s.photo_url}" alt="Sighting" class="sighting-img" onerror="this.src='https://via.placeholder.com/90?text=Tea+Tree'">
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <strong>${s.tree_name || "Wild Tea Tree"}</strong>
+                                <span class="${badgeClass}">${s.validation_status.toUpperCase()}</span>
+                            </div>
+                            <div style="font-size: 0.82rem; color: var(--text-light); margin: 0.2rem 0;">
+                                📍 ${s.location_name} (${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)})
+                            </div>
+                            <p style="font-size: 0.88rem; color: var(--text);">${s.notes}</p>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <span>Submitted ${formatDate(s.submitted_at)}</span>
+                                ${s.validation_status === 'pending' ? `
+                                    <div style="display:flex; gap:0.4rem;">
+                                        <button onclick="updateSightingStatus('${s.sighting_id}', 'validated')" class="btn btn-sm btn-primary" style="padding:0.25rem 0.6rem; font-size:0.75rem;">✓ Approve</button>
+                                        <button onclick="updateSightingStatus('${s.sighting_id}', 'rejected')" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.6rem; font-size:0.75rem; color:#dc2626;">✗ Reject</button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join("");
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">Failed to load sightings: ${err.message}</div>`;
+            }
+        }
+
+        async function updateSightingStatus(sightingId, status) {
+            try {
+                await apiFetch(`/api/citizen/sightings/${sightingId}/status`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status })
+                });
+                loadSightings();
+            } catch (err) {
+                alert("Failed to update sighting status: " + err.message);
+            }
+        }
+
+        document.getElementById("sighting-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById("alert-box");
+            alertBox.innerHTML = "";
+
+            const form = e.target;
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch("/api/citizen/sightings", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Submission failed");
+
+                showAlert(alertBox, "✅ Sighting submitted successfully! Pending verification.", "success");
+                form.reset();
+                document.getElementById("preview").style.backgroundImage = "none";
+                document.getElementById("preview").innerHTML = "<span>📷 Select or take a photo</span>";
+                loadSightings();
+            } catch (err) {
+                showAlert(alertBox, err.message, "error");
+            }
+        });
+
+        loadSightings();
+    </script>
+</body>
+</html>

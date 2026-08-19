@@ -24,6 +24,10 @@ async def connect_to_mongo():
     await db.trees.create_index("location_name")
     await db.environmental_data.create_index("tree_id")
     await db.environmental_data.create_index("timestamp")
+    await db.citizen_sightings.create_index("sighting_id", unique=True)
+    await db.citizen_sightings.create_index("validation_status")
+    await db.conservation_anomalies.create_index("anomaly_id", unique=True)
+    await db.conservation_anomalies.create_index("status")
 
     print("Connected to MongoDB")
 

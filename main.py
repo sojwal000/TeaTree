@@ -20,11 +20,26 @@ from backend.routes.satellite_routes import router as satellite_router
 from backend.routes.report_routes import router as report_router
 from backend.routes.alert_routes import router as alert_router
 from backend.routes.soil_routes import router as soil_router
+from backend.routes.citizen_routes import router as citizen_router
+from backend.routes.conservation_routes import router as conservation_router
+from backend.routes.ecosystem_routes import router as ecosystem_router
+from backend.routes.region_routes import router as region_router
+from backend.routes.config_routes import router as config_router
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await connect_to_mongo()
+    yield
+    await close_mongo_connection()
+
 
 app = FastAPI(
     title="Wild Tea Tree Big Data Visualization Platform",
     description="Data management, analytics, and visualization platform for wild tea tree research",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -35,10 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Startup / shutdown events
-app.add_event_handler("startup", connect_to_mongo)
-app.add_event_handler("shutdown", close_mongo_connection)
 
 # Register API routers
 app.include_router(auth_router)
@@ -52,6 +63,11 @@ app.include_router(satellite_router)
 app.include_router(report_router)
 app.include_router(alert_router)
 app.include_router(soil_router)
+app.include_router(citizen_router)
+app.include_router(conservation_router)
+app.include_router(ecosystem_router)
+app.include_router(region_router)
+app.include_router(config_router)
 
 # Ensure uploads directory exists
 os.makedirs("uploads", exist_ok=True)
@@ -94,6 +110,13 @@ async def serve_tree_detail(tree_id: str):
     return FileResponse(os.path.join(FRONTEND_DIR, "tree_detail.html"))
 
 
+@app.get("/trees/{tree_id}")
+@app.get("/passport/{tree_id}")
+@app.get("/tree_passport.html")
+async def serve_passport(tree_id: str = None):
+    return FileResponse(os.path.join(FRONTEND_DIR, "tree_passport.html"))
+
+
 @app.get("/map")
 async def serve_map():
     return FileResponse(os.path.join(FRONTEND_DIR, "map.html"))
@@ -127,4 +150,23 @@ async def serve_reports():
 @app.get("/soil")
 async def serve_soil():
     return FileResponse(os.path.join(FRONTEND_DIR, "soil.html"))
+
+
+@app.get("/citizen_submit.html")
+@app.get("/citizen")
+async def serve_citizen():
+    return FileResponse(os.path.join(FRONTEND_DIR, "citizen_submit.html"))
+
+
+@app.get("/climate_scenarios.html")
+@app.get("/climate-scenarios")
+async def serve_climate_scenarios():
+    return FileResponse(os.path.join(FRONTEND_DIR, "climate_scenarios.html"))
+
+
+@app.get("/region_comparison.html")
+@app.get("/regions")
+async def serve_regions():
+    return FileResponse(os.path.join(FRONTEND_DIR, "region_comparison.html"))
+
 

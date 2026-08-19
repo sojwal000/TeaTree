@@ -386,6 +386,58 @@
                 if (bounds.length > 0) {
                     map.fitBounds(bounds, { padding: [40, 40] });
                 }
+
+                // Overlay Citizen Science Sightings (Yellow/Orange star markers)
+                try {
+                    const citRes = await apiGet("/api/citizen/sightings");
+                    (citRes.sightings || []).forEach(s => {
+                        if (s.latitude && s.longitude) {
+                            const citMarker = L.circleMarker([s.latitude, s.longitude], {
+                                radius: 9,
+                                fillColor: "#f59e0b",
+                                color: "#78350f",
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.9
+                            });
+                            citMarker.bindPopup(`
+                                <strong>👥 Citizen Sighting: ${s.tree_name || 'Wild Tea Tree'}</strong><br/>
+                                📍 ${s.location_name}<br/>
+                                📝 ${s.notes}<br/>
+                                <span class="badge badge-${s.validation_status}">${s.validation_status.toUpperCase()}</span>
+                            `);
+                            markerCluster.addLayer(citMarker);
+                        }
+                    });
+                } catch (e) {
+                    console.error("Failed loading citizen map markers", e);
+                }
+
+                // Overlay Conservation Anomalies (Red warning markers)
+                try {
+                    const anomRes = await apiGet("/api/conservation/anomalies");
+                    (anomRes.anomalies || []).forEach(a => {
+                        if (a.latitude && a.longitude) {
+                            const anomMarker = L.circleMarker([a.latitude, a.longitude], {
+                                radius: 10,
+                                fillColor: "#ef4444",
+                                color: "#991b1b",
+                                weight: 3,
+                                opacity: 1,
+                                fillOpacity: 0.95
+                            });
+                            anomMarker.bindPopup(`
+                                <strong>🚨 Conservation Anomaly: ${a.anomaly_type}</strong><br/>
+                                📍 ${a.region}<br/>
+                                ⚠️ ${a.explanation}<br/>
+                                <strong>Severity: ${a.severity.toUpperCase()}</strong>
+                            `);
+                            markerCluster.addLayer(anomMarker);
+                        }
+                    });
+                } catch (e) {
+                    console.error("Failed loading anomaly map markers", e);
+                }
             } catch (err) {
                 console.error(err);
                 alert("Failed to load map data: " + err.message);

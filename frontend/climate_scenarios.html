@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Climate Scenario Simulator — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <style>
+        .scenario-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .simulation-banner {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #fff;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+        .controls-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+        .slider-group {
+            margin-bottom: 1.5rem;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .slider-val {
+            font-size: 1.2rem;
+            color: var(--primary);
+            background: var(--accent-light);
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            outline: none;
+            cursor: pointer;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            text-align: center;
+            box-shadow: var(--shadow-xs);
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: var(--primary-dark);
+            margin: 0.3rem 0;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+        .btn-reset {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn-reset:hover {
+            background: #e2e8f0;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 850px) {
+            .chart-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="scenario-container">
+        <div class="page-header" style="margin-bottom: 1.5rem;">
+            <h1>🌡️ "What-If" Climate Scenario Simulator</h1>
+            <p>Model the impact of hypothetical temperature warming and rainfall shifts on wild tea tree populations.</p>
+        </div>
+
+        <div class="simulation-banner">
+            <div>
+                <strong>🔬 READ-ONLY SIMULATION MODE</strong>
+                <div style="font-size: 0.85rem; opacity: 0.9;">
+                    Projections are calculated dynamically using species health correlation models. No database records are modified.
+                </div>
+            </div>
+            <button class="btn-reset" onclick="resetSimulator()">🔄 Reset Scenario</button>
+        </div>
+
+        <div class="controls-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+                <h2 style="font-size: 1.2rem; color: var(--primary-dark);">⚙️ Adjust Scenario Parameters</h2>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label for="region-select" style="font-size: 0.88rem; font-weight: 600;">Target Region:</label>
+                    <select id="region-select" onchange="updateSimulation()" style="padding: 0.4rem 0.8rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                        <option value="All">All Regions</option>
+                        <option value="Jorhat">Jorhat, Assam</option>
+                        <option value="Darjeeling">Darjeeling, West Bengal</option>
+                        <option value="Nilgiri Hills">Nilgiri Hills, Tamil Nadu</option>
+                        <option value="Assam">Assam Valley</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>🌡️ Temperature Shift</span>
+                    <span id="temp-val-display" class="slider-val">0.0 °C</span>
+                </div>
+                <input type="range" id="temp-slider" min="-5.0" max="5.0" step="0.5" value="0.0" oninput="updateSimulation()">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    <span>-5.0 °C (Cooling)</span>
+                    <span>0.0 °C (Current)</span>
+                    <span>+5.0 °C (Severe Warming)</span>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>🌧️ Rainfall Shift</span>
+                    <span id="rain-val-display" class="slider-val">0 %</span>
+                </div>
+                <input type="range" id="rain-slider" min="-50" max="50" step="5" value="0" oninput="updateSimulation()">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    <span>-50% (Severe Drought)</span>
+                    <span>0% (Normal)</span>
+                    <span>+50% (Excess Monsoon)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Current vs Projected Health</div>
+                <div id="health-value" class="stat-value">78 ➜ 78</div>
+                <div id="health-change-badge" style="font-size: 0.85rem; font-weight: 700; color: var(--success);">0 pts</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Scenario Temperature</div>
+                <div id="temp-value" class="stat-value">23.5 °C</div>
+                <div id="temp-change-sub" style="font-size: 0.8rem; color: var(--text-light);">Baseline: 23.5 °C</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Scenario Rainfall</div>
+                <div id="rain-value" class="stat-value">180 mm</div>
+                <div id="rain-change-sub" style="font-size: 0.8rem; color: var(--text-light);">Baseline: 180 mm</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Projected Risk Level</div>
+                <div id="risk-value" class="stat-value">🟢 Healthy</div>
+                <div id="risk-sub" style="font-size: 0.8rem; color: var(--text-light);">Health Score ≥ 80</div>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="card" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">📊 Health Score Comparison</h3>
+                <canvas id="chart-comparison" height="220"></canvas>
+            </div>
+            <div class="card" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">📈 Projected Tree Health Distribution</h3>
+                <canvas id="chart-distribution" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        document.getElementById("navbar").innerHTML = renderNavbar("Climate Simulator");
+
+        let comparisonChart = null;
+        let distributionChart = null;
+
+        function resetSimulator() {
+            document.getElementById("temp-slider").value = 0.0;
+            document.getElementById("rain-slider").value = 0;
+            document.getElementById("region-select").value = "All";
+            updateSimulation();
+        }
+
+        async function updateSimulation() {
+            const tempVal = parseFloat(document.getElementById("temp-slider").value);
+            const rainVal = parseFloat(document.getElementById("rain-slider").value);
+            const region = document.getElementById("region-select").value;
+
+            document.getElementById("temp-val-display").textContent = (tempVal > 0 ? `+${tempVal.toFixed(1)}` : tempVal.toFixed(1)) + " °C";
+            document.getElementById("rain-val-display").textContent = (rainVal > 0 ? `+${rainVal}` : rainVal) + " %";
+
+            try {
+                const res = await apiGet(`/api/climate/scenario?temp_change=${tempVal}&rain_change_pct=${rainVal}&region=${region}`);
+                
+                const baseH = res.baseline.health_score;
+                const projH = res.scenario.projected_health_score;
+                const change = res.scenario.health_change;
+
+                document.getElementById("health-value").textContent = `${baseH} ➜ ${projH}`;
+                
+                const badge = document.getElementById("health-change-badge");
+                if (change > 0) {
+                    badge.textContent = `+${change} pts (Improvement)`;
+                    badge.style.color = "var(--success)";
+                } else if (change < 0) {
+                    badge.textContent = `${change} pts (Decline)`;
+                    badge.style.color = "var(--danger)";
+                } else {
+                    badge.textContent = `0 pts (Unchanged)`;
+                    badge.style.color = "var(--text-light)";
+                }
+
+                document.getElementById("temp-value").textContent = `${res.scenario.scenario_temperature_c} °C`;
+                document.getElementById("temp-change-sub").textContent = `Baseline: ${res.baseline.temperature_c} °C (${tempVal > 0 ? '+' + tempVal : tempVal} °C)`;
+
+                document.getElementById("rain-value").textContent = `${res.scenario.scenario_rainfall_mm} mm`;
+                document.getElementById("rain-change-sub").textContent = `Baseline: ${res.baseline.rainfall_mm} mm (${rainVal > 0 ? '+' + rainVal : rainVal}%)`;
+
+                document.getElementById("risk-value").textContent = `${res.scenario.risk_symbol} ${res.scenario.risk_level}`;
+
+                renderCharts(baseH, projH, res.tree_projections || []);
+            } catch (err) {
+                console.error("Simulation failed:", err);
+            }
+        }
+
+        function renderCharts(baseHealth, projHealth, treeProjections) {
+            // Comparison chart
+            const ctxComp = document.getElementById("chart-comparison").getContext("2d");
+            if (comparisonChart) comparisonChart.destroy();
+
+            comparisonChart = new Chart(ctxComp, {
+                type: 'bar',
+                data: {
+                    labels: ['Baseline Health', 'Projected Scenario Health'],
+                    datasets: [{
+                        label: 'Health Score (0-100)',
+                        data: [baseHealth, projHealth],
+                        backgroundColor: ['#52b788', projHealth >= 60 ? '#38bdf8' : '#f87171'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { min: 0, max: 100 } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Distribution chart
+            const ctxDist = document.getElementById("chart-distribution").getContext("2d");
+            if (distributionChart) distributionChart.destroy();
+
+            const treeLabels = treeProjections.map((t, i) => t.tree_id.substring(0, 6));
+            const baseVals = treeProjections.map(t => t.baseline_health);
+            const projVals = treeProjections.map(t => t.projected_health);
+
+            distributionChart = new Chart(ctxDist, {
+                type: 'line',
+                data: {
+                    labels: treeLabels,
+                    datasets: [
+                        { label: 'Baseline', data: baseVals, borderColor: '#10b981', tension: 0.3 },
+                        { label: 'Projected', data: projVals, borderColor: '#ef4444', tension: 0.3, borderDash: [5, 5] }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        updateSimulation();
+    </script>
+</body>
+</html>

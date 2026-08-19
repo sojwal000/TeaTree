@@ -105,6 +105,9 @@ function renderNavbar(activePage) {
     const pages = [
         { name: "Dashboard", href: "/dashboard", icon: "📊" },
         { name: "Trees", href: "/trees", icon: "🌳" },
+        { name: "Citizen Science", href: "/citizen", icon: "👥" },
+        { name: "Climate Simulator", href: "/climate-scenarios", icon: "🌡️" },
+        { name: "Regions", href: "/regions", icon: "🌐" },
         { name: "Soil Portal", href: "/soil", icon: "🌱" },
         { name: "Map", href: "/map", icon: "🗺️" },
         { name: "Analytics", href: "/analytics", icon: "📈" },

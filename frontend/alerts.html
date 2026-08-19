@@ -78,8 +78,19 @@
         </div>
 
         <!-- Alert List -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>🚨 Potential Conservation Anomalies</span>
+                <button class="btn btn-sm btn-primary" onclick="runAnomalyScan()">🔍 Scan for Conservation Anomalies</button>
+            </div>
+            <div id="conservation-anomaly-list">
+                <div class="loading"><div class="spinner"></div> Loading conservation anomalies...</div>
+            </div>
+        </div>
+
+        <!-- Alert List -->
         <div class="card">
-            <div class="card-title">📋 Alert List</div>
+            <div class="card-title">📋 Weather & Environmental Alert List</div>
             <div id="alert-list">
                 <div class="loading"><div class="spinner"></div> Loading alerts...</div>
             </div>
@@ -211,8 +222,68 @@
             return div.innerHTML;
         }
 
+        async function loadAnomalies() {
+            const container = document.getElementById("conservation-anomaly-list");
+            try {
+                const res = await apiGet("/api/conservation/anomalies");
+                const anomalies = res.anomalies || [];
+                if (anomalies.length === 0) {
+                    container.innerHTML = `<p style="color:var(--text-light);text-align:center;padding:1.5rem;">No conservation anomalies currently logged.</p>`;
+                    return;
+                }
+
+                container.innerHTML = anomalies.map(a => `
+                    <div class="alert-card ${a.severity.toLowerCase()}" style="margin-bottom:1rem;">
+                        <div class="alert-icon">⚠️</div>
+                        <div class="alert-body">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h4>${escapeHtml(a.anomaly_type)}</h4>
+                                <span class="badge badge-${a.severity.toLowerCase()}">${a.severity.toUpperCase()}</span>
+                            </div>
+                            <p style="font-size:0.9rem; color:var(--text); margin:0.4rem 0;">${escapeHtml(a.explanation)}</p>
+                            <div class="alert-meta">
+                                📍 <strong>Region:</strong> ${escapeHtml(a.region)}
+                                &nbsp;·&nbsp; <strong>Affected Trees:</strong> ${a.affected_count}
+                                &nbsp;·&nbsp; <strong>Status:</strong> ${a.status}
+                                &nbsp;·&nbsp; <strong>Detected:</strong> ${formatDate(a.detected_at)}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                            <a href="/map" class="btn btn-sm btn-secondary">🗺️ View Map</a>
+                            ${a.status !== 'resolved' ? `<button class="btn btn-sm btn-primary" onclick="resolveAnomaly('${a.anomaly_id}')">✓ Resolve</button>` : ''}
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">Failed to load anomalies: ${err.message}</div>`;
+            }
+        }
+
+        async function runAnomalyScan() {
+            try {
+                const res = await apiPost("/api/conservation/anomalies/check", {});
+                alert(`Conservation scan complete!\n${res.message}`);
+                loadAnomalies();
+            } catch (err) {
+                alert("Anomaly scan failed: " + err.message);
+            }
+        }
+
+        async function resolveAnomaly(anomalyId) {
+            try {
+                await apiFetch(`/api/conservation/anomalies/${anomalyId}/status`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: "resolved" })
+                });
+                loadAnomalies();
+            } catch (err) {
+                alert("Failed to resolve anomaly: " + err.message);
+            }
+        }
+
         loadAlertSummary();
         loadAlerts();
+        loadAnomalies();
     </script>
 </body>
 </html>

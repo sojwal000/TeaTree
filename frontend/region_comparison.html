@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Region Federated Comparison — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <style>
+        .region-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .selector-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+        .region-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .region-chip {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all var(--transition);
+        }
+        .region-chip.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary-dark);
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .region-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+        .region-card.no-data {
+            background: #fafafa;
+            border-style: dashed;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.9rem;
+        }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-label { color: var(--text-light); }
+        .metric-value { font-weight: 700; color: var(--text); }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 850px) {
+            .chart-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="region-container">
+        <div class="page-header" style="margin-bottom: 1.5rem;">
+            <h1>🌐 Cross-Region Federated Comparison</h1>
+            <p>Compare ecological metrics, soil health, rainfall, and Ecosystem Health Index across tea-growing regions in India.</p>
+        </div>
+
+        <div class="selector-card">
+            <h2 style="font-size: 1.1rem; color: var(--primary-dark);">📍 Select Regions to Compare</h2>
+            <div id="region-chips-container" class="region-chips">
+                <div class="loading"><div class="spinner"></div> Loading regions...</div>
+            </div>
+        </div>
+
+        <div id="comparison-cards" class="comparison-grid"></div>
+
+        <div class="chart-grid">
+            <div class="card" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">📊 Tree Health & Ecosystem Health Index (EHI)</h3>
+                <canvas id="chart-health-ehi" height="220"></canvas>
+            </div>
+            <div class="card" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🌦️ Temperature (°C) & Rainfall (mm)</h3>
+                <canvas id="chart-temp-rain" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        document.getElementById("navbar").innerHTML = renderNavbar("Regions");
+
+        let selectedRegions = ["Jorhat", "Darjeeling", "Nilgiri Hills"];
+        let healthEhiChart = null;
+        let tempRainChart = null;
+
+        async function initRegions() {
+            try {
+                const res = await apiGet("/api/regions");
+                const chipsContainer = document.getElementById("region-chips-container");
+                
+                const allRegionNames = (res.regions || []).map(r => r.region_id);
+                // Ensure default regions
+                ["Jorhat", "Darjeeling", "Nilgiri Hills", "Assam", "Munnar", "Kurseong"].forEach(r => {
+                    if (!allRegionNames.includes(r)) allRegionNames.push(r);
+                });
+
+                chipsContainer.innerHTML = allRegionNames.map(name => {
+                    const active = selectedRegions.includes(name) ? "active" : "";
+                    return `<button class="region-chip ${active}" onclick="toggleRegion('${name}')">${name}</button>`;
+                }).join("");
+
+                loadComparison();
+            } catch (err) {
+                console.error("Failed to load region list:", err);
+            }
+        }
+
+        function toggleRegion(name) {
+            if (selectedRegions.includes(name)) {
+                if (selectedRegions.length <= 1) return; // Keep at least one
+                selectedRegions = selectedRegions.filter(r => r !== name);
+            } else {
+                selectedRegions.push(name);
+            }
+
+            document.querySelectorAll(".region-chip").forEach(chip => {
+                if (selectedRegions.includes(chip.textContent.trim())) {
+                    chip.classList.add("active");
+                } else {
+                    chip.classList.remove("active");
+                }
+            });
+
+            loadComparison();
+        }
+
+        async function loadComparison() {
+            const container = document.getElementById("comparison-cards");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Fetching cross-region analytics...</div>`;
+
+            try {
+                const regionQuery = selectedRegions.join(",");
+                const res = await apiGet(`/api/regions/compare?regions=${encodeURIComponent(regionQuery)}`);
+                const regions = res.regions || [];
+
+                container.innerHTML = regions.map(r => {
+                    if (!r.has_data) {
+                        return `
+                        <div class="region-card no-data">
+                            <h3 style="color: var(--text-muted); font-size: 1.2rem; margin-bottom: 0.5rem;">📍 ${r.region}</h3>
+                            <div style="background: #fee2e2; color: #991b1b; padding: 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-align: center; margin-top: 1rem;">
+                                ⚠️ Insufficient Data
+                            </div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.75rem; text-align: center;">
+                                No verified tree observations present in MongoDB for this region.
+                            </p>
+                        </div>`;
+                    }
+
+                    return `
+                    <div class="region-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="color: var(--primary-dark); font-size: 1.25rem;">📍 ${r.region}</h3>
+                                <small style="color: var(--text-muted);">${r.total_trees} Tree Records</small>
+                            </div>
+                            <span style="font-size: 1.2rem;">${r.ehi_status === 'Healthy' ? '🟢' : r.ehi_status === 'Moderate' ? '🟡' : '🔴'}</span>
+                        </div>
+
+                        <div class="metric-row">
+                            <span class="metric-label">Avg Tree Health</span>
+                            <span class="metric-value">${r.avg_tree_health} / 100</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Ecosystem Health Index</span>
+                            <span class="metric-value">${r.ecosystem_health_index} / 100</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Soil Suitability</span>
+                            <span class="metric-value">${r.soil_suitability_score} / 100</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Avg Temperature</span>
+                            <span class="metric-value">${r.avg_temperature} °C</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Avg Rainfall</span>
+                            <span class="metric-value">${r.avg_rainfall} mm</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Healthy Trees</span>
+                            <span class="metric-value">${r.healthy_trees} / ${r.total_trees}</span>
+                        </div>
+                    </div>`;
+                }).join("");
+
+                renderComparisonCharts(regions);
+            } catch (err) {
+                container.innerHTML = `<div class="alert alert-error">Failed to load region comparison: ${err.message}</div>`;
+            }
+        }
+
+        function renderComparisonCharts(regions) {
+            const valid = regions.filter(r => r.has_data);
+            const labels = valid.map(r => r.region);
+            const healthVals = valid.map(r => r.avg_tree_health);
+            const ehiVals = valid.map(r => r.ecosystem_health_index);
+            const tempVals = valid.map(r => r.avg_temperature);
+            const rainVals = valid.map(r => r.avg_rainfall);
+
+            // Chart 1
+            const ctx1 = document.getElementById("chart-health-ehi").getContext("2d");
+            if (healthEhiChart) healthEhiChart.destroy();
+            healthEhiChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Avg Tree Health', data: healthVals, backgroundColor: '#2d6a4f' },
+                        { label: 'Ecosystem Health Index', data: ehiVals, backgroundColor: '#52b788' }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { min: 0, max: 100 } } }
+            });
+
+            // Chart 2
+            const ctx2 = document.getElementById("chart-temp-rain").getContext("2d");
+            if (tempRainChart) tempRainChart.destroy();
+            tempRainChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Avg Temperature (°C)', data: tempVals, backgroundColor: '#f97316', yAxisID: 'y' },
+                        { label: 'Avg Rainfall (mm)', data: rainVals, backgroundColor: '#0284c7', yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { type: 'linear', position: 'left', title: { display: true, text: 'Temperature (°C)' } },
+                        y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Rainfall (mm)' } }
+                    }
+                }
+            });
+        }
+
+        initRegions();
+    </script>
+</body>
+</html>

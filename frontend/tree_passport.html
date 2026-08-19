@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Digital Passport — Wild Tea Tree Platform</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/qrcode.min.js"></script>
+    <style>
+        .passport-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .passport-card {
+            background: var(--bg-card);
+            border: 2px solid var(--primary-light);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        .passport-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .passport-badge {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: #fff;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .passport-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 800px) {
+            .passport-grid { grid-template-columns: 1fr; }
+        }
+        .tree-photo {
+            width: 100%;
+            height: 260px;
+            border-radius: var(--radius);
+            object-fit: cover;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        .attr-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .attr-table td {
+            padding: 0.65rem 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.92rem;
+        }
+        .attr-table td.label {
+            font-weight: 600;
+            color: var(--text-light);
+            width: 40%;
+        }
+        .attr-table td.val {
+            font-weight: 700;
+            color: var(--text);
+        }
+        .qr-section {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+        .qr-canvas-wrap {
+            background: #ffffff;
+            padding: 1rem;
+            border-radius: var(--radius);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-sm);
+            margin: 0.75rem auto;
+            border: 1px solid var(--border-light);
+            min-width: 200px;
+            min-height: 200px;
+        }
+        .qr-canvas-wrap svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+        }
+        .qr-canvas-wrap canvas {
+            display: none;
+        }
+        .btn-qr {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 0.65rem 1.25rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin: 0.25rem;
+            text-decoration: none;
+            font-size: 0.88rem;
+        }
+        .btn-qr:hover {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-qr-secondary {
+            background: #ffffff;
+            color: var(--primary-dark);
+            border: 1px solid var(--border);
+        }
+        .btn-qr-secondary:hover {
+            background: var(--bg-hover);
+        }
+        .tree-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            width: 100%;
+            max-width: 400px;
+        }
+        .qr-url-pill {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #1b4332;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.82rem;
+            margin: 0.4rem 0 0.8rem 0;
+            border: 1px solid #c8e6c9;
+            word-break: break-all;
+            max-width: 100%;
+        }
+        .qr-network-config {
+            margin-top: 1rem;
+            padding-top: 0.85rem;
+            border-top: 1px dashed var(--border);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .qr-network-input {
+            padding: 0.35rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-family: monospace;
+            width: 230px;
+        }
+        .print-hide {
+            display: block;
+        }
+        @media print {
+            .print-hide, .navbar, .btn-qr, .qr-network-config, #tree-select-box {
+                display: none !important;
+            }
+            .passport-card {
+                box-shadow: none;
+                border: 1px solid #000;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+
+    <div class="passport-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;" class="print-hide">
+            <div>
+                <a href="/trees" class="btn btn-secondary btn-sm" style="text-decoration: none;">← Back to Tree Registry</a>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Print Passport</button>
+            </div>
+        </div>
+
+        <div id="tree-select-box" style="margin-bottom: 1.5rem;" class="print-hide">
+            <label for="tree-select" style="font-weight: 700; margin-right: 0.5rem; font-size: 0.9rem;">Select Tree to View:</label>
+            <select id="tree-select" class="tree-selector" onchange="onTreeSelectChange(this.value)">
+                <option value="">Loading trees...</option>
+            </select>
+        </div>
+
+        <div id="passport-content">
+            <div class="loading"><div class="spinner"></div> Loading Digital Passport...</div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+
+    <!-- Embedded Fail-Safe QR Code Generator Engine -->
+    <script>
+    (function () {
+        'use strict';
+        var EXP_TABLE = new Array(256), LOG_TABLE = new Array(256);
+        for (var i = 0; i < 8; i++) EXP_TABLE[i] = 1 << i;
+        for (var i = 8; i < 256; i++) EXP_TABLE[i] = EXP_TABLE[i - 4] ^ EXP_TABLE[i - 5] ^ EXP_TABLE[i - 6] ^ EXP_TABLE[i - 8];
+        for (var i = 0; i < 255; i++) LOG_TABLE[EXP_TABLE[i]] = i;
+        function glog(n) { if (n < 1) throw new Error("glog"); return LOG_TABLE[n]; }
+        function gexp(n) { while (n < 0) n += 255; while (n >= 255) n -= 255; return EXP_TABLE[n]; }
+
+        function Polynomial(num, shift) {
+            var offset = 0;
+            while (offset < num.length && num[offset] === 0) offset++;
+            this.num = new Array(num.length - offset + shift);
+            for (var i = 0; i < num.length - offset; i++) this.num[i] = num[i + offset];
+        }
+        Polynomial.prototype = {
+            get: function (idx) { return this.num[idx]; },
+            getLength: function () { return this.num.length; },
+            multiply: function (e) {
+                var num = new Array(this.getLength() + e.getLength() - 1);
+                for (var i = 0; i < num.length; i++) num[i] = 0;
+                for (var i = 0; i < this.getLength(); i++) {
+                    for (var j = 0; j < e.getLength(); j++) {
+                        num[i + j] ^= gexp(glog(this.get(i)) + glog(e.get(j)));
+                    }
+                }
+                return new Polynomial(num, 0);
+            },
+            mod: function (e) {
+                if (this.getLength() - e.getLength() < 0) return this;
+                var ratio = glog(this.get(0)) - glog(e.get(0));
+                var num = new Array(this.getLength());
+                for (var i = 0; i < this.getLength(); i++) num[i] = this.get(i);
+                for (var i = 0; i < e.getLength(); i++) num[i] ^= gexp(glog(e.get(i)) + ratio);
+                return new Polynomial(num, 0).mod(e);
+            }
+        };
+
+        var RS_BLOCK_TABLE = [
+            [1, 26, 19], [1, 26, 16], [1, 26, 13], [1, 26, 9],
+            [1, 44, 34], [1, 44, 28], [1, 44, 22], [1, 44, 16],
+            [1, 70, 55], [1, 70, 44], [2, 35, 17], [2, 35, 13],
+            [1, 100, 80], [2, 50, 32], [2, 50, 24], [4, 25, 9],
+            [1, 134, 108], [2, 67, 43], [2, 33, 15, 2, 34, 16], [2, 33, 11, 2, 34, 12],
+            [2, 86, 68], [4, 43, 27], [4, 43, 19], [4, 43, 15],
+            [2, 98, 78], [4, 49, 31], [2, 32, 14, 4, 33, 15], [4, 39, 13, 1, 40, 14],
+            [2, 121, 97], [2, 60, 38, 2, 61, 39], [4, 40, 18, 2, 41, 19], [4, 40, 14, 2, 41, 15],
+            [2, 146, 116], [3, 58, 36, 2, 59, 37], [4, 36, 16, 4, 37, 17], [4, 36, 12, 4, 37, 13],
+            [2, 86, 68, 2, 87, 69], [4, 69, 43, 1, 70, 44], [6, 43, 19, 2, 44, 20], [6, 43, 15, 2, 44, 16],
+            [4, 101, 81], [1, 80, 50, 4, 81, 51], [4, 50, 22, 4, 51, 23], [3, 36, 12, 8, 37, 13],
+            [2, 116, 92, 2, 117, 93], [6, 58, 36, 2, 59, 37], [4, 46, 20, 6, 47, 21], [7, 42, 14, 4, 43, 15],
+            [4, 133, 107], [8, 59, 37, 1, 60, 38], [8, 44, 20, 4, 45, 21], [12, 33, 11, 4, 34, 12],
+            [3, 145, 115, 1, 146, 116], [4, 64, 40, 5, 65, 41], [11, 36, 16, 5, 37, 17], [11, 36, 12, 5, 37, 13],
+            [5, 109, 87, 1, 110, 88], [5, 65, 41, 5, 66, 42], [5, 54, 24, 7, 55, 25], [11, 36, 12, 7, 37, 13],
+            [5, 122, 98, 1, 123, 99], [7, 73, 45, 3, 74, 46], [15, 43, 19, 2, 44, 20], [3, 45, 15, 13, 46, 16],
+            [1, 135, 107, 5, 136, 108], [10, 74, 46, 1, 75, 47], [1, 50, 22, 15, 51, 23], [2, 42, 14, 17, 43, 15],
+            [5, 150, 120, 1, 151, 121], [9, 69, 43, 4, 70, 44], [17, 50, 22, 1, 51, 23], [2, 42, 14, 19, 43, 15],
+            [3, 141, 113, 4, 142, 114], [3, 70, 44, 11, 71, 45], [17, 47, 21, 4, 48, 22], [9, 39, 13, 16, 40, 14],
+            [3, 135, 107, 5, 136, 108], [3, 67, 41, 13, 68, 42], [15, 54, 24, 5, 55, 25], [15, 43, 15, 10, 44, 16]
+        ];
+
+        function getRS(ver, ec) {
+            var raw = RS_BLOCK_TABLE[(ver - 1) * 4 + ec];
+            var list = [];
+            for (var i = 0; i < raw.length / 3; i++) {
+                var c = raw[i * 3], t = raw[i * 3 + 1], d = raw[i * 3 + 2];
+                for (var j = 0; j < c; j++) list.push({ totalCount: t, dataCount: d });
+            }
+            return list;
+        }
+
+        function BitBuffer() { this.buffer = []; this.length = 0; }
+        BitBuffer.prototype = {
+            put: function (num, len) { for (var i = 0; i < len; i++) this.putBit(((num >>> (len - i - 1)) & 1) === 1); },
+            putBit: function (bit) {
+                var idx = Math.floor(this.length / 8);
+                if (this.buffer.length <= idx) this.buffer.push(0);
+                if (bit) this.buffer[idx] |= (0x80 >>> (this.length % 8));
+                this.length++;
+            }
+        };
+
+        function parseUTF8(str) {
+            var bytes = [];
+            for (var i = 0; i < str.length; i++) {
+                var c = str.charCodeAt(i);
+                if (c < 0x80) bytes.push(c);
+                else if (c < 0x800) { bytes.push(0xc0 | (c >> 6)); bytes.push(0x80 | (c & 0x3f)); }
+                else if (c < 0xd800 || c >= 0xe000) { bytes.push(0xe0 | (c >> 12)); bytes.push(0x80 | ((c >> 6) & 0x3f)); bytes.push(0x80 | (c & 0x3f)); }
+                else { i++; var c2 = 0x10000 + (((c & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff)); bytes.push(0xf0 | (c2 >> 18)); bytes.push(0x80 | ((c2 >> 12) & 0x3f)); bytes.push(0x80 | ((c2 >> 6) & 0x3f)); bytes.push(0x80 | (c2 & 0x3f)); }
+            }
+            return bytes;
+        }
+
+        var PATTERNS = [[], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50], [6, 30, 54], [6, 32, 58], [6, 34, 62], [6, 26, 46, 66], [6, 26, 48, 70], [6, 26, 50, 74], [6, 30, 54, 78], [6, 30, 56, 82], [6, 30, 58, 86], [6, 34, 62, 90]];
+
+        function makeQR(text) {
+            var bytes = parseUTF8(text);
+            var ec = 0; // index into RS_BLOCK_TABLE groups: 0=L, 1=M, 2=Q, 3=H
+            var ver = 1;
+            for (ver = 1; ver <= 20; ver++) {
+                var rs = getRS(ver, ec);
+                var totalData = 0;
+                for (var i = 0; i < rs.length; i++) totalData += rs[i].dataCount;
+                var bitLen = 4 + (ver < 10 ? 8 : 16) + bytes.length * 8;
+                if (bitLen <= totalData * 8) break;
+            }
+            if (ver > 20) ver = 20;
+
+            var rs = getRS(ver, ec);
+            var buf = new BitBuffer();
+            buf.put(4, 4); // 8-bit byte mode
+            buf.put(bytes.length, ver < 10 ? 8 : 16);
+            for (var i = 0; i < bytes.length; i++) buf.put(bytes[i], 8);
+
+            var totalDataCount = 0;
+            for (var i = 0; i < rs.length; i++) totalDataCount += rs[i].dataCount;
+            if (buf.length + 4 <= totalDataCount * 8) buf.put(0, 4);
+            while (buf.length % 8 !== 0) buf.putBit(false);
+            while (true) {
+                if (buf.length >= totalDataCount * 8) break;
+                buf.put(0xec, 8);
+                if (buf.length >= totalDataCount * 8) break;
+                buf.put(0x11, 8);
+            }
+
+            // Create RS code words
+            var offset = 0, maxDc = 0, maxEc = 0;
+            var dcData = [], ecData = [];
+            for (var r = 0; r < rs.length; r++) {
+                var dcCount = rs[r].dataCount, ecCount = rs[r].totalCount - dcCount;
+                maxDc = Math.max(maxDc, dcCount); maxEc = Math.max(maxEc, ecCount);
+                var curDc = [];
+                for (var i = 0; i < dcCount; i++) curDc.push(0xff & buf.buffer[i + offset]);
+                dcData.push(curDc);
+                offset += dcCount;
+
+                var poly = new Polynomial([1], 0);
+                for (var i = 0; i < ecCount; i++) poly = poly.multiply(new Polynomial([1, gexp(i)], 0));
+                var rawPoly = new Polynomial(curDc, poly.getLength() - 1);
+                var modPoly = rawPoly.mod(poly);
+                var curEc = [];
+                for (var i = 0; i < poly.getLength() - 1; i++) {
+                    var mIdx = i + modPoly.getLength() - (poly.getLength() - 1);
+                    curEc.push(mIdx >= 0 ? modPoly.get(mIdx) : 0);
+                }
+                ecData.push(curEc);
+            }
+
+            var finalData = [];
+            for (var i = 0; i < maxDc; i++) {
+                for (var r = 0; r < rs.length; r++) {
+                    if (i < dcData[r].length) finalData.push(dcData[r][i]);
+                }
+            }
+            for (var i = 0; i < maxEc; i++) {
+                for (var r = 0; r < rs.length; r++) {
+                    if (i < ecData[r].length) finalData.push(ecData[r][i]);
+                }
+            }
+
+            // Matrix construction
+            var size = ver * 4 + 17;
+            var matrix = new Array(size);
+            for (var i = 0; i < size; i++) matrix[i] = new Array(size).fill(null);
+
+            function setFinder(r, c) {
+                for (var dr = -1; dr <= 7; dr++) {
+                    if (r + dr < 0 || r + dr >= size) continue;
+                    for (var dc = -1; dc <= 7; dc++) {
+                        if (c + dc < 0 || c + dc >= size) continue;
+                        if ((0 <= dr && dr <= 6 && (dc === 0 || dc === 6)) ||
+                            (0 <= dc && dc <= 6 && (dr === 0 || dr === 6)) ||
+                            (2 <= dr && dr <= 4 && 2 <= dc && dc <= 4)) {
+                            matrix[r + dr][c + dc] = true;
+                        } else {
+                            matrix[r + dr][c + dc] = false;
+                        }
+                    }
+                }
+            }
+            setFinder(0, 0); setFinder(size - 7, 0); setFinder(0, size - 7);
+
+            // Alignment
+            var pos = PATTERNS[ver - 1] || [];
+            for (var i = 0; i < pos.length; i++) {
+                for (var j = 0; j < pos.length; j++) {
+                    var ar = pos[i], ac = pos[j];
+                    if (matrix[ar][ac] !== null) continue;
+                    for (var dr = -2; dr <= 2; dr++) {
+                        for (var dc = -2; dc <= 2; dc++) {
+                            matrix[ar + dr][ac + dc] = (dr === -2 || dr === 2 || dc === -2 || dc === 2 || (dr === 0 && dc === 0));
+                        }
+                    }
+                }
+            }
+
+            // Timing
+            for (var r = 8; r < size - 8; r++) if (matrix[r][6] === null) matrix[r][6] = (r % 2 === 0);
+            for (var c = 8; c < size - 8; c++) if (matrix[6][c] === null) matrix[6][c] = (c % 2 === 0);
+
+            // Type Info (Mask 0)
+            // FIX: RS_BLOCK_TABLE groups are ordered L,M,Q,H (index 0,1,2,3), but the
+            // ISO/IEC 18004 format-info field does NOT use that same numbering -
+            // it requires L=01, M=00, Q=11, H=10. Writing the raw table index (0)
+            // straight into the format bits told every real scanner "this is level M"
+            // while the data was actually built with level L's block sizes, so the
+            // codeword layout scanners computed from the (wrong) format info never
+            // matched the actual data -> unreadable QR that still looked fine visually.
+            var G15 = 1335, G15_MASK = 21522;
+            var ecLevelBits = [1, 0, 3, 2]; // table-index -> ISO format-info code
+            var tData = (ecLevelBits[ec] << 3) | 0;
+            var d = tData << 10;
+            while (d >= G15) {
+                var shift = Math.floor(Math.log2(d)) - Math.floor(Math.log2(G15));
+                if (shift < 0) break;
+                d ^= (G15 << shift);
+            }
+            var tBits = ((tData << 10) | d) ^ G15_MASK;
+            for (var i = 0; i < 15; i++) {
+                var bit = ((tBits >> i) & 1) === 1;
+                if (i < 6) matrix[i][8] = bit;
+                else if (i < 8) matrix[i + 1][8] = bit;
+                else matrix[size - 15 + i][8] = bit;
+
+                if (i < 8) matrix[8][size - i - 1] = bit;
+                else if (i < 9) matrix[8][15 - i] = bit;
+                else matrix[8][15 - i - 1] = bit;
+            }
+            matrix[size - 8][8] = true;
+
+            // Map data
+            var inc = -1, row = size - 1, bitIdx = 7, byteIdx = 0;
+            for (var col = size - 1; col > 0; col -= 2) {
+                if (col === 6) col--;
+                while (true) {
+                    for (var c = 0; c < 2; c++) {
+                        if (matrix[row][col - c] === null) {
+                            var dark = false;
+                            if (byteIdx < finalData.length) {
+                                dark = (((finalData[byteIdx] >>> bitIdx) & 1) === 1);
+                            }
+                            var mask = (row + (col - c)) % 2 === 0;
+                            if (mask) dark = !dark;
+                            matrix[row][col - c] = dark;
+                            bitIdx--;
+                            if (bitIdx === -1) { byteIdx++; bitIdx = 7; }
+                        }
+                    }
+                    row += inc;
+                    if (row < 0 || row >= size) { row -= inc; inc = -inc; break; }
+                }
+            }
+
+            return { matrix: matrix, size: size };
+        }
+
+        window.renderDirectQR = function (text, containerId, canvasId, options) {
+            options = options || {};
+            var darkColor = options.colorDark || '#1b4332';
+            var lightColor = options.colorLight || '#ffffff';
+            var displaySize = options.width || 180;
+            var margin = 2;
+
+            try {
+                var qr = makeQR(text);
+                var count = qr.size;
+                var fullCount = count + margin * 2;
+
+                // 1. Render Vector SVG
+                var paths = [];
+                for (var r = 0; r < count; r++) {
+                    for (var c = 0; c < count; c++) {
+                        if (qr.matrix[r][c]) {
+                            paths.push('M' + (c + margin) + ',' + (r + margin) + 'h1v1h-1z');
+                        }
+                    }
+                }
+                var svgHtml = '<svg id="qr-svg-graphic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + fullCount + ' ' + fullCount + '" width="' + displaySize + '" height="' + displaySize + '" shape-rendering="crispEdges" style="display:block;margin:0 auto;border-radius:4px;">' +
+                    '<rect width="100%" height="100%" fill="' + lightColor + '"/>' +
+                    '<path d="' + paths.join(' ') + '" fill="' + darkColor + '"/>' +
+                    '</svg>';
+
+                var container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML = svgHtml;
+                }
+
+                // 2. Render to Canvas for download
+                var canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    canvas.width = displaySize;
+                    canvas.height = displaySize;
+                    var ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.fillStyle = lightColor;
+                        ctx.fillRect(0, 0, displaySize, displaySize);
+                        var tileW = displaySize / fullCount;
+                        var tileH = displaySize / fullCount;
+                        ctx.fillStyle = darkColor;
+                        for (var r = 0; r < count; r++) {
+                            for (var c = 0; c < count; c++) {
+                                if (qr.matrix[r][c]) {
+                                    var x = Math.round((c + margin) * tileW);
+                                    var y = Math.round((r + margin) * tileH);
+                                    var w = Math.ceil((c + margin + 1) * tileW) - x;
+                                    var h = Math.ceil((r + margin + 1) * tileH) - y;
+                                    ctx.fillRect(x, y, w, h);
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            } catch (e) {
+                console.error("Direct QR render failed:", e);
+                return false;
+            }
+        };
+    })();
+    </script>
+
+    <script>
+        if (!requireAuth()) throw new Error("Not authenticated");
+        document.getElementById("navbar").innerHTML = renderNavbar("Trees");
+
+        let currentTreeId = "";
+        let currentTreeData = null;
+        let allTreesCache = [];
+
+        function getEffectiveBaseUrl() {
+            const savedHost = localStorage.getItem("tea_custom_qr_host");
+            if (savedHost && savedHost.trim().length > 0) {
+                return savedHost.trim().replace(/\/$/, "");
+            }
+            if (window.location.origin && window.location.origin !== "null" && window.location.origin !== "file://") {
+                return window.location.origin;
+            }
+            return "http://localhost:8000";
+        }
+
+        function updateCustomHost(newHost) {
+            if (newHost && newHost.trim()) {
+                localStorage.setItem("tea_custom_qr_host", newHost.trim().replace(/\/$/, ""));
+            } else {
+                localStorage.removeItem("tea_custom_qr_host");
+            }
+            regenerateActiveQR();
+        }
+
+        async function initPassport() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentTreeId = urlParams.get("id");
+
+            try {
+                const trees = await apiGet("/api/trees?limit=100");
+                allTreesCache = trees;
+                
+                const selectEl = document.getElementById("tree-select");
+                if (trees && trees.length > 0) {
+                    selectEl.innerHTML = trees.map(t => 
+                        `<option value="${t.tree_id}" ${t.tree_id === currentTreeId ? 'selected' : ''}>
+                            ${t.location_name} (ID: ${t.tree_id.substring(0, 8)}...)
+                        </option>`
+                    ).join("");
+
+                    if (!currentTreeId) {
+                        currentTreeId = trees[0].tree_id;
+                        selectEl.value = currentTreeId;
+                    }
+                } else {
+                    selectEl.innerHTML = `<option value="">No trees registered</option>`;
+                }
+
+                if (currentTreeId) {
+                    loadTreePassport(currentTreeId);
+                } else {
+                    document.getElementById("passport-content").innerHTML = `
+                        <div class="alert alert-info">No trees found in the database. Please add a tree first.</div>
+                    `;
+                }
+            } catch (err) {
+                console.error("Failed to load trees list:", err);
+                if (currentTreeId) {
+                    loadTreePassport(currentTreeId);
+                }
+            }
+        }
+
+        function onTreeSelectChange(treeId) {
+            if (!treeId) return;
+            currentTreeId = treeId;
+            const newUrl = `${window.location.pathname}?id=${treeId}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+            loadTreePassport(treeId);
+        }
+
+        async function loadTreePassport(treeId) {
+            const container = document.getElementById("passport-content");
+            container.innerHTML = `<div class="loading"><div class="spinner"></div> Generating Digital Tree Passport...</div>`;
+
+            try {
+                const tree = await apiGet(`/api/trees/${treeId}`);
+                currentTreeData = tree;
+
+                let ehi = { ecosystem_health_index: 78, status: "Healthy" };
+                try {
+                    const ehiRes = await apiGet(`/api/environmental/ehi/${treeId}`);
+                    if (ehiRes) ehi = ehiRes;
+                } catch (e) {}
+
+                const baseUrl = getEffectiveBaseUrl();
+                const passportUrl = `${baseUrl}/tree_passport.html?id=${tree.tree_id}`;
+
+                container.innerHTML = `
+                <div class="passport-card" id="passport-card-element">
+                    <div class="passport-header">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom: 0.3rem;">
+                                <span style="font-size: 1.6rem;">🌿</span>
+                                <h1 style="margin: 0; font-size: 1.5rem; color: var(--primary-dark);">Wild Tea Tree Digital Passport</h1>
+                            </div>
+                            <p style="margin: 0; color: var(--text-light); font-size: 0.9rem;">Verified Botanical Registry & Traceability Record</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="passport-badge">Certified Specimen</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">PASSPORT ID</div>
+                            <strong style="font-size: 1.05rem; color: var(--primary); font-family: monospace;">${tree.tree_id}</strong>
+                        </div>
+                    </div>
+
+                    <div class="passport-grid">
+                        <div>
+                            <img src="${(tree.images && tree.images[0]) || 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&auto=format&fit=crop'}" alt="Wild Tea Tree Photo" class="tree-photo" onerror="this.src='https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&auto=format&fit=crop'">
+                            
+                            <div style="margin-top: 1rem; background: var(--accent-light); padding: 1rem; border-radius: var(--radius); text-align: center;">
+                                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--primary-dark);">Health Score</div>
+                                <div style="font-size: 2.2rem; font-weight: 800; color: var(--primary-dark);">${tree.health_score || 78} / 100</div>
+                                <span style="font-weight: 700; color: ${(tree.health_score || 78) >= 70 ? 'var(--success)' : 'var(--warning)'};">🟢 ${(tree.health_score || 78) >= 70 ? 'Healthy' : 'At Risk'}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <table class="attr-table">
+                                <tr><td class="label">Location Name</td><td class="val">📍 ${tree.location_name || 'Assam Wild Region'}</td></tr>
+                                <tr><td class="label">GPS Coordinates</td><td class="val">${tree.latitude ? tree.latitude.toFixed(6) : '26.750000'}, ${tree.longitude ? tree.longitude.toFixed(6) : '94.200000'}</td></tr>
+                                <tr><td class="label">Elevation</td><td class="val">⛰️ ${tree.elevation || 1500} m above sea level</td></tr>
+                                <tr><td class="label">Height</td><td class="val">📏 ${tree.height || 10.5} meters</td></tr>
+                                <tr><td class="label">Trunk Diameter</td><td class="val">⭕ ${tree.diameter || 42.0} cm</td></tr>
+                                <tr><td class="label">Estimated Age / Ring Count</td><td class="val">⏳ ${tree.ring_count || 120} years</td></tr>
+                                <tr><td class="label">Ecosystem Health Index</td><td class="val">🌱 ${ehi.ecosystem_health_index || 78} / 100 (${ehi.status || 'Healthy'})</td></tr>
+                                <tr><td class="label">Tree Uses</td><td class="val">🍃 Germplasm Preservation, Wild Leaf Harvesting</td></tr>
+                                <tr><td class="label">First Registered</td><td class="val">📅 ${formatDate(tree.created_at || new Date())}</td></tr>
+                            </table>
+
+                            <!-- Live Dynamic QR Code Section -->
+                            <div class="qr-section">
+                                <h3 style="font-size: 1.1rem; color: var(--primary-dark); margin-bottom: 0.3rem;">📱 Live Dynamic QR Code</h3>
+                                <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 0.4rem;">Scan to open this tree's real-time digital profile directly from MongoDB.</p>
+                                
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem;">QR Code Link:</div>
+                                    <div class="qr-url-pill" id="qr-url-text">${passportUrl}</div>
+                                </div>
+
+                                <div class="qr-canvas-wrap">
+                                    <div id="qr-svg-container" style="display: flex; align-items: center; justify-content: center; min-width: 180px; min-height: 180px;"></div>
+                                    <canvas id="qr-canvas" width="180" height="180"></canvas>
+                                </div>
+
+                                <div style="margin-top: 0.5rem;">
+                                    <button class="btn-qr" onclick="regenerateActiveQR()">🔄 Regenerate QR</button>
+                                    <button class="btn-qr btn-qr-secondary" onclick="downloadQR()">💾 Download QR Code</button>
+                                    <button class="btn-qr btn-qr-secondary" onclick="copyQRLink()">📋 Copy Link</button>
+                                    <a href="${passportUrl}" target="_blank" class="btn-qr btn-qr-secondary">↗️ Open Link</a>
+                                </div>
+
+                                <div class="qr-network-config">
+                                    <span>📶 Phone / LAN Access IP:</span>
+                                    <input type="text" id="host-override-input" class="qr-network-input" value="${baseUrl}" placeholder="e.g. http://192.168.1.5:8000">
+                                    <button onclick="updateCustomHost(document.getElementById('host-override-input').value)" class="btn-qr" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; margin: 0;">Apply Host</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+                // Render the QR code immediately
+                generateQR(passportUrl);
+            } catch (err) {
+                console.error("Failed to render passport:", err);
+                container.innerHTML = `<div class="alert alert-error">Failed to load passport: ${err.message}</div>`;
+            }
+        }
+
+        function regenerateActiveQR() {
+            if (!currentTreeData) return;
+            const baseUrl = getEffectiveBaseUrl();
+            const passportUrl = `${baseUrl}/tree_passport.html?id=${currentTreeData.tree_id}`;
+            const urlEl = document.getElementById("qr-url-text");
+            if (urlEl) urlEl.textContent = passportUrl;
+            generateQR(passportUrl);
+        }
+
+        function generateQR(text) {
+            try {
+                if (typeof window.renderDirectQR === 'function') {
+                    window.renderDirectQR(text, "qr-svg-container", "qr-canvas", {
+                        width: 180,
+                        colorDark: "#1b4332",
+                        colorLight: "#ffffff"
+                    });
+                } else if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
+                    const canvas = document.getElementById("qr-canvas");
+                    if (canvas) {
+                        QRCode.toCanvas(canvas, text, {
+                            width: 180,
+                            margin: 2,
+                            colorDark: "#1b4332",
+                            colorLight: "#ffffff"
+                        });
+                        canvas.style.display = "block";
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to generate QR code:", err);
+            }
+        }
+
+        function downloadQR() {
+            try {
+                const canvas = document.getElementById("qr-canvas");
+                const treeId = currentTreeData ? currentTreeData.tree_id.substring(0, 8) : "passport";
+                
+                if (canvas && canvas.toDataURL) {
+                    const image = canvas.toDataURL("image/png");
+                    const link = document.createElement('a');
+                    link.download = `tree-${treeId}-passport-qr.png`;
+                    link.href = image;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    const svg = document.getElementById("qr-svg-graphic");
+                    if (svg) {
+                        const svgData = new XMLSerializer().serializeToString(svg);
+                        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+                        const svgUrl = URL.createObjectURL(svgBlob);
+                        const downloadLink = document.createElement("a");
+                        downloadLink.href = svgUrl;
+                        downloadLink.download = `tree-${treeId}-passport-qr.svg`;
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to download QR code:", e);
+            }
+        }
+
+        function copyQRLink() {
+            if (!currentTreeData) return;
+            const baseUrl = getEffectiveBaseUrl();
+            const passportUrl = `${baseUrl}/tree_passport.html?id=${currentTreeData.tree_id}`;
+            navigator.clipboard.writeText(passportUrl).then(() => {
+                alert("QR Code Link copied to clipboard:\n" + passportUrl);
+            }).catch(() => {
+                prompt("Copy this passport link:", passportUrl);
+            });
+        }
+
+        initPassport();
+    </script>
+</body>
+</html>
