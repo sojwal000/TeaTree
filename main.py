@@ -25,6 +25,7 @@ from backend.routes.conservation_routes import router as conservation_router
 from backend.routes.ecosystem_routes import router as ecosystem_router
 from backend.routes.region_routes import router as region_router
 from backend.routes.config_routes import router as config_router
+from backend.routes import lifecycle_routes
 
 from contextlib import asynccontextmanager
 
@@ -68,6 +69,7 @@ app.include_router(conservation_router)
 app.include_router(ecosystem_router)
 app.include_router(region_router)
 app.include_router(config_router)
+app.include_router(lifecycle_routes.router)
 
 # Ensure uploads directory exists
 os.makedirs("uploads", exist_ok=True)
@@ -169,4 +171,12 @@ async def serve_climate_scenarios():
 async def serve_regions():
     return FileResponse(os.path.join(FRONTEND_DIR, "region_comparison.html"))
 
+from fastapi.responses import FileResponse
 
+
+@app.get("/tea-lifecycle")
+async def tea_lifecycle_page():
+
+    return FileResponse(
+        "frontend/tea_lifecycle.html"
+    )

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Tea Tree Lifecycle Intelligence
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+
+    <style>
+
+        .life-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .life-header {
+            margin-bottom: 2rem;
+        }
+
+        .life-header h1 {
+            color: var(--primary-dark);
+            margin-bottom: .4rem;
+        }
+
+        .tree-picker {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 2rem;
+        }
+
+        .tree-picker select {
+            width: 100%;
+            padding: .8rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+            gap: 1.25rem;
+        }
+
+        @media(max-width: 1000px) {
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .feature-card h2 {
+            color: var(--primary-dark);
+            margin-bottom: .4rem;
+        }
+
+        .subtle {
+            color: var(--text-muted);
+            font-size: .9rem;
+        }
+
+        .risk-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 1.5rem auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 10px solid var(--border);
+        }
+
+        .risk-number {
+            font-size: 2.2rem;
+            font-weight: 800;
+        }
+
+        .risk-low {
+            border-color: #16a34a;
+        }
+
+        .risk-moderate {
+            border-color: #eab308;
+        }
+
+        .risk-high {
+            border-color: #f97316;
+        }
+
+        .risk-critical {
+            border-color: #dc2626;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: .25rem .6rem;
+            border-radius: 999px;
+            background: var(--accent-light);
+            margin: .2rem;
+            font-size: .8rem;
+        }
+
+        .info-item {
+            padding: .9rem 0;
+            border-bottom:
+                1px solid var(--border-light);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item strong {
+            display: block;
+            margin-bottom: .3rem;
+        }
+
+        .risk-factor {
+            padding: .6rem;
+            margin: .4rem 0;
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+        }
+
+        .warning-box {
+            margin-top: 1rem;
+            padding: .9rem;
+            border-radius: var(--radius);
+            background: rgba(234,179,8,.1);
+            border: 1px solid rgba(234,179,8,.4);
+            font-size: .85rem;
+        }
+
+        .danger-btn {
+            background: #b91c1c;
+            color: white;
+            border: 0;
+            border-radius: var(--radius);
+            padding: .7rem 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div id="navbar"></div>
+
+<div class="life-container">
+
+    <div class="life-header">
+
+        <h1>
+            🌿 Tea Tree Lifecycle Intelligence
+        </h1>
+
+        <p class="subtle">
+            Bioactive research, mortality-risk assessment
+            and end-of-life biomass utilisation for
+            Camellia sinensis.
+        </p>
+
+    </div>
+
+
+    <div class="tree-picker">
+
+        <strong>Select Tea Tree</strong>
+
+        <select
+            id="tree-select"
+            onchange="loadTree(this.value)"
+        >
+            <option value="">
+                Loading trees...
+            </option>
+        </select>
+
+    </div>
+
+
+    <div class="feature-grid">
+
+        <!-- MEDICINAL -->
+
+        <div class="feature-card">
+
+            <h2>
+                🍃 Medicinal & Bioactive Profile
+            </h2>
+
+            <p class="subtle">
+                Research information for Camellia sinensis.
+            </p>
+
+            <div id="medicinal-content">
+                Loading...
+            </div>
+
+        </div>
+
+
+        <!-- MORTALITY -->
+
+        <div class="feature-card">
+
+            <h2>
+                ❤️ Mortality Risk
+            </h2>
+
+            <p class="subtle">
+                Risk assessment from existing tree and
+                environmental data.
+            </p>
+
+            <div id="mortality-content">
+                Select a tree.
+            </div>
+
+        </div>
+
+
+        <!-- POST DEATH -->
+
+        <div class="feature-card">
+
+            <h2>
+                ♻️ After-Death Utilisation
+            </h2>
+
+            <p class="subtle">
+                Potential uses of tea plant biomass after
+                confirmed mortality or removal.
+            </p>
+
+            <div id="post-death-content">
+                Loading...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="/static/app.js"></script>
+
+<script>
+
+document.getElementById("navbar").innerHTML =
+    renderNavbar("Trees");
+
+
+async function initialise() {
+
+    try {
+
+        const trees = await apiGet(
+            "/api/trees?limit=1000"
+        );
+
+        const select =
+            document.getElementById(
+                "tree-select"
+            );
+
+        const list =
+            Array.isArray(trees)
+                ? trees
+                : (trees.trees || []);
+
+        select.innerHTML =
+            list.map(tree => `
+
+                <option value="${tree.tree_id}">
+
+                    ${tree.location_name || "Tea Tree"}
+
+                    (${tree.tree_id.substring(0, 8)})
+
+                </option>
+
+            `).join("");
+
+
+        await loadMedicinal();
+        await loadPostDeath();
+
+
+        if (list.length) {
+
+            await loadTree(
+                list[0].tree_id
+            );
+        }
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        alert(
+            "Failed to initialize lifecycle module."
+        );
+    }
+}
+
+
+async function loadMedicinal() {
+
+    const data = await apiGet(
+        "/api/lifecycle/medicinal"
+    );
+
+    const container =
+        document.getElementById(
+            "medicinal-content"
+        );
+
+
+    container.innerHTML = `
+
+        <div class="info-item">
+
+            <strong>
+                Scientific Name
+            </strong>
+
+            <em>
+                ${data.scientific_name}
+            </em>
+
+        </div>
+
+        ${data.major_compounds.map(item => `
+
+            <div class="info-item">
+
+                <strong>
+                    ${item.name}
+                </strong>
+
+                <span class="tag">
+                    ${item.category}
+                </span>
+
+                <p class="subtle">
+                    ${item.research_interest}
+                </p>
+
+            </div>
+
+        `).join("")}
+
+        <div class="warning-box">
+            ⚠️ ${data.evidence_notice}
+        </div>
+    `;
+}
+
+
+async function loadPostDeath() {
+
+    const data = await apiGet(
+        "/api/lifecycle/post-death"
+    );
+
+    const container =
+        document.getElementById(
+            "post-death-content"
+        );
+
+
+    container.innerHTML = `
+
+        ${data.uses.map(item => `
+
+            <div class="info-item">
+
+                <strong>
+                    ${item.name}
+                </strong>
+
+                <span class="tag">
+                    ${item.priority} Priority
+                </span>
+
+                <p class="subtle">
+                    ${item.description}
+                </p>
+
+                <small>
+                    Material:
+                    ${item.material.join(", ")}
+                </small>
+
+            </div>
+
+        `).join("")}
+
+        <div class="warning-box">
+            ⚠️ ${data.safety_notice}
+        </div>
+    `;
+}
+
+
+async function loadTree(treeId) {
+
+    if (!treeId) {
+        return;
+    }
+
+    const container =
+        document.getElementById(
+            "mortality-content"
+        );
+
+    container.innerHTML =
+        "Calculating risk...";
+
+
+    try {
+
+        const data = await apiGet(
+            `/api/lifecycle/mortality-risk/${treeId}`
+        );
+
+
+        const cssClass =
+            data.risk_level
+                .toLowerCase();
+
+
+        container.innerHTML = `
+
+            <div
+                class="
+                    risk-circle
+                    risk-${cssClass}
+                "
+            >
+
+                <div class="risk-number">
+                    ${data.mortality_risk_score}
+                </div>
+
+                <small>
+                    / 100 risk
+                </small>
+
+            </div>
+
+
+            <div
+                style="
+                    text-align:center;
+                    margin-bottom:1rem;
+                "
+            >
+
+                <strong
+                    style="
+                        font-size:1.3rem;
+                    "
+                >
+                    ${data.risk_level} Risk
+                </strong>
+
+                <div class="subtle">
+                    ${data.status}
+                </div>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <strong>
+                    Current Health
+                </strong>
+
+                ${data.current_health_score} / 100
+
+            </div>
+
+
+            <div class="info-item">
+
+                <strong>
+                    Health Trend
+                </strong>
+
+                ${data.health_trend.trend}
+
+                <div class="subtle">
+                    Change:
+                    ${data.health_trend.change}
+                </div>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <strong>
+                    Risk Components
+                </strong>
+
+                ${Object.entries(
+                    data.risk_components
+                ).map(([key, value]) => `
+
+                    <div class="risk-factor">
+
+                        ${key.replace("_", " ")}
+                        :
+                        <strong>
+                            ${value}
+                        </strong>
+
+                    </div>
+
+                `).join("")}
+
+            </div>
+
+
+            <div class="info-item">
+
+                <strong>
+                    Detected Factors
+                </strong>
+
+                <ul>
+
+                    ${data.factors.map(
+                        item =>
+                            `<li>${item}</li>`
+                    ).join("")}
+
+                </ul>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <strong>
+                    Recommendations
+                </strong>
+
+                <ul>
+
+                    ${data.recommendations.map(
+                        item =>
+                            `<li>${item}</li>`
+                    ).join("")}
+
+                </ul>
+
+            </div>
+
+
+            <div class="warning-box">
+
+                ⚠️ ${data.disclaimer}
+
+            </div>
+
+
+            <button
+                class="danger-btn"
+                onclick="
+                    confirmDeath('${treeId}')
+                "
+            >
+                Mark Tree as Confirmed Dead
+            </button>
+        `;
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        container.innerHTML = `
+
+            <div class="warning-box">
+
+                Could not calculate mortality risk.
+
+                ${error.message}
+
+            </div>
+        `;
+    }
+}
+
+
+async function confirmDeath(treeId) {
+
+    const confirmed = confirm(
+        "Confirm that this tree has been physically "
+        + "verified as dead? This should not be based "
+        + "only on the risk score."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response = await fetch(
+            `/api/lifecycle/death/${treeId}`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+
+                    ...(getToken
+                        ? {
+                            "Authorization":
+                                `Bearer ${getToken()}`
+                        }
+                        : {})
+                }
+            }
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to record tree death."
+            );
+        }
+
+
+        alert(
+            "Tree has been recorded as confirmed dead."
+        );
+
+
+        await loadTree(treeId);
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        alert(error.message);
+    }
+}
+
+
+initialise();
+
+</script>
+
+</body>
+
+</html>
