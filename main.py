@@ -27,6 +27,7 @@ from backend.routes.region_routes import router as region_router
 from backend.routes.config_routes import router as config_router
 from backend.routes import lifecycle_routes
 
+
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -180,3 +181,7 @@ async def tea_lifecycle_page():
     return FileResponse(
         "frontend/tea_lifecycle.html"
     )
+
+@app.get("/tea_lifecycle")
+async def tea_lifecycle():
+    return FileResponse("frontend/tea_lifecycle.html")

@@ -728,3 +728,720 @@ a:hover { color: var(--primary-dark); text-decoration: none; }
     .page-header h1 { font-size: 1.2rem; }
     .container { padding: 0.75rem; }
 }
+
+
+/* ============================================================
+   TEATREE MODERN NAVIGATION
+   ============================================================ */
+
+.tt-navbar {
+    width: 100%;
+    min-height: 64px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 1.25rem;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    box-shadow:
+        0 1px 4px rgba(0, 0, 0, 0.04);
+
+    position: sticky;
+    top: 0;
+
+    z-index: 5000;
+}
+
+
+/* ============================================================
+   BRAND
+   ============================================================ */
+
+.tt-brand {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.55rem;
+
+    text-decoration: none;
+
+    color: var(--primary-dark, #166534);
+
+    font-size: 1.15rem;
+
+    font-weight: 800;
+
+    white-space: nowrap;
+
+    margin-right: 1.25rem;
+}
+
+
+.tt-brand:hover {
+
+    color: var(--primary, #16a34a);
+
+}
+
+
+.tt-brand-icon {
+
+    font-size: 1.55rem;
+
+    line-height: 1;
+}
+
+
+.tt-brand-text {
+
+    letter-spacing: -0.025em;
+
+}
+
+
+/* ============================================================
+   MAIN NAV
+   ============================================================ */
+
+.tt-nav {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.15rem;
+
+    flex: 1;
+
+}
+
+
+.tt-nav-item {
+
+    position: relative;
+
+}
+
+
+.tt-nav-link {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.38rem;
+
+    min-height: 40px;
+
+    padding: 0.55rem 0.72rem;
+
+    border-radius: 8px;
+
+    border: 1px solid transparent;
+
+    color: #374151;
+
+    background: transparent;
+
+    text-decoration: none;
+
+    font-size: 0.84rem;
+
+    font-weight: 650;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
+
+}
+
+
+.tt-nav-link:hover {
+
+    background: #f0fdf4;
+
+    color: var(--primary-dark, #166534);
+
+}
+
+
+.tt-nav-link.active {
+
+    background: #dcfce7;
+
+    color: #166534;
+
+}
+
+
+.tt-nav-item.group-active
+.tt-nav-link {
+
+    color: #166534;
+
+}
+
+
+.tt-nav-arrow {
+
+    font-size: 0.58rem;
+
+    margin-left: 0.12rem;
+
+    transition:
+        transform 0.15s ease;
+
+}
+
+
+.tt-nav-item.open
+.tt-nav-arrow {
+
+    transform: rotate(180deg);
+
+}
+
+
+/* ============================================================
+   DROPDOWN
+   ============================================================ */
+
+.tt-dropdown {
+
+    position: absolute;
+
+    top: calc(100% + 7px);
+
+    left: 0;
+
+    min-width: 235px;
+
+    padding: 0.45rem;
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 11px;
+
+    box-shadow:
+        0 14px 35px rgba(0, 0, 0, 0.11),
+        0 3px 10px rgba(0, 0, 0, 0.05);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    transform:
+        translateY(-5px);
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.15s ease,
+        visibility 0.15s ease,
+        transform 0.15s ease;
+
+}
+
+
+.tt-nav-item.open
+.tt-dropdown {
+
+    opacity: 1;
+
+    visibility: visible;
+
+    transform:
+        translateY(0);
+
+    pointer-events: auto;
+
+}
+
+
+.tt-dropdown a {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.65rem;
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 0.68rem 0.72rem;
+
+    border-radius: 8px;
+
+    color: #374151;
+
+    text-decoration: none;
+
+    font-size: 0.82rem;
+
+    font-weight: 550;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+
+}
+
+
+.tt-dropdown a:hover {
+
+    background: #f0fdf4;
+
+    color: #166534;
+
+}
+
+
+.tt-dropdown a.active {
+
+    background: #dcfce7;
+
+    color: #166534;
+
+    font-weight: 750;
+
+}
+
+
+/* ============================================================
+   USER AREA
+   ============================================================ */
+
+.tt-user-area {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.65rem;
+
+    margin-left: auto;
+
+}
+
+
+.tt-user-name {
+
+    max-width: 160px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+    color: #6b7280;
+
+    font-size: 0.78rem;
+
+    font-weight: 600;
+
+}
+
+
+.tt-logout-btn {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-height: 36px;
+
+    padding: 0.45rem 0.75rem;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #374151;
+
+    cursor: pointer;
+
+    font-size: 0.76rem;
+
+    font-weight: 700;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+
+}
+
+
+.tt-logout-btn:hover {
+
+    background: #fef2f2;
+
+    border-color: #fecaca;
+
+    color: #991b1b;
+
+}
+
+
+/* ============================================================
+   MOBILE BUTTON
+   ============================================================ */
+
+.tt-mobile-btn {
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 40px;
+
+    height: 40px;
+
+    margin-left: auto;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #374151;
+
+    cursor: pointer;
+
+    font-size: 1.2rem;
+
+}
+
+
+.tt-mobile-btn:hover {
+
+    background: #f0fdf4;
+
+    color: #166534;
+
+}
+
+
+/* ============================================================
+   KEYBOARD ACCESSIBILITY
+   ============================================================ */
+
+.tt-nav-link:focus-visible,
+.tt-dropdown a:focus-visible,
+.tt-mobile-btn:focus-visible,
+.tt-logout-btn:focus-visible {
+
+    outline:
+        3px solid rgba(34, 197, 94, 0.35);
+
+    outline-offset: 2px;
+
+}
+
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 1150px) {
+
+    .tt-navbar {
+
+        padding:
+            0 0.8rem;
+
+    }
+
+
+    .tt-brand {
+
+        margin-right:
+            0.5rem;
+
+    }
+
+
+    .tt-nav-link {
+
+        padding:
+            0.5rem 0.55rem;
+
+        font-size:
+            0.78rem;
+
+    }
+
+
+    .tt-user-name {
+
+        display: none;
+
+    }
+
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .tt-navbar {
+
+        min-height:
+            60px;
+
+        flex-wrap:
+            wrap;
+
+        padding:
+            0 0.9rem;
+
+    }
+
+
+    .tt-mobile-btn {
+
+        display:
+            inline-flex;
+
+    }
+
+
+    .tt-nav {
+
+        display:
+            none;
+
+        width:
+            100%;
+
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+
+        gap:
+            0.15rem;
+
+        padding:
+            0.65rem 0;
+
+        margin-top:
+            0.5rem;
+
+        border-top:
+            1px solid #e5e7eb;
+
+    }
+
+
+    .tt-nav.mobile-open {
+
+        display:
+            flex;
+
+    }
+
+
+    .tt-nav-item {
+
+        width:
+            100%;
+
+    }
+
+
+    .tt-nav-link {
+
+        width:
+            100%;
+
+        box-sizing:
+            border-box;
+
+        justify-content:
+            flex-start;
+
+        min-height:
+            44px;
+
+        padding:
+            0.7rem 0.75rem;
+
+    }
+
+
+    .tt-nav-item:has(.tt-dropdown)
+    .tt-nav-link {
+
+        justify-content:
+            space-between;
+
+    }
+
+
+    .tt-dropdown {
+
+        position:
+            static;
+
+        width:
+            100%;
+
+        min-width:
+            0;
+
+        box-sizing:
+            border-box;
+
+        display:
+            none;
+
+        padding:
+            0.2rem 0.5rem 0.45rem 1rem;
+
+        background:
+            #f8fafc;
+
+        border:
+            none;
+
+        border-radius:
+            8px;
+
+        box-shadow:
+            none;
+
+        opacity:
+            1;
+
+        visibility:
+            visible;
+
+        transform:
+            none;
+
+        pointer-events:
+            auto;
+
+    }
+
+
+    .tt-nav-item.open
+    .tt-dropdown {
+
+        display:
+            block;
+
+    }
+
+
+    .tt-dropdown a {
+
+        min-height:
+            42px;
+
+    }
+
+
+    .tt-user-area {
+
+        margin-left:
+            0.5rem;
+
+    }
+
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 500px) {
+
+    .tt-brand-text {
+
+        font-size:
+            1rem;
+
+    }
+
+
+    .tt-user-area {
+
+        gap:
+            0.35rem;
+
+    }
+
+
+    .tt-logout-btn {
+
+        padding:
+            0.42rem 0.6rem;
+
+    }
+
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .tt-nav-link,
+    .tt-dropdown,
+    .tt-nav-arrow,
+    .tt-logout-btn {
+
+        transition:
+            none !important;
+
+    }
+
+}
+
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+
+@media print {
+
+    .tt-navbar {
+
+        display:
+            none !important;
+
+    }
+
+}
