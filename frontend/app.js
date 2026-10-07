@@ -2,446 +2,533 @@
    Wild Tea Tree Platform – Utility JavaScript
    ═══════════════════════════════════════════════════════════════ */
 
-const API_BASE = "";  // Same origin
+const API_BASE = "";
 
-// ─── Auth helpers ───────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH HELPERS
+// ═══════════════════════════════════════════════════════════════
+
 function getToken() {
     return localStorage.getItem("tea_token");
 }
+
 
 function setToken(token) {
     localStorage.setItem("tea_token", token);
 }
 
+
 function getUser() {
+
     const u = localStorage.getItem("tea_user");
-    return u ? JSON.parse(u) : null;
+
+    try {
+        return u ? JSON.parse(u) : null;
+    } catch {
+        return null;
+    }
 }
+
 
 function setUser(user) {
-    localStorage.setItem("tea_user", JSON.stringify(user));
+    localStorage.setItem(
+        "tea_user",
+        JSON.stringify(user)
+    );
 }
 
+
 function logout() {
+
     localStorage.removeItem("tea_token");
     localStorage.removeItem("tea_user");
+
     window.location.href = "/login";
 }
 
+
 function requireAuth() {
+
     if (!getToken()) {
+
         window.location.href = "/login";
+
         return false;
     }
+
     return true;
 }
 
-// ─── API helpers ────────────────────────────────────────────────
-async function apiFetch(url, options = {}) {
-    const token = getToken();
-    const headers = { "Content-Type": "application/json", ...options.headers };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(API_BASE + url, { ...options, headers });
+// ═══════════════════════════════════════════════════════════════
+// API HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+async function apiFetch(url, options = {}) {
+
+    const token = getToken();
+
+    const headers = {
+        "Content-Type": "application/json",
+        ...options.headers
+    };
+
+    if (token) {
+        headers["Authorization"] =
+            `Bearer ${token}`;
+    }
+
+
+    const res = await fetch(
+        API_BASE + url,
+        {
+            ...options,
+            headers
+        }
+    );
+
 
     if (res.status === 401) {
+
         logout();
-        throw new Error("Session expired");
+
+        throw new Error(
+            "Session expired"
+        );
     }
+
 
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Request failed" }));
-        throw new Error(err.detail || "Request failed");
+
+        const err =
+            await res
+                .json()
+                .catch(() => ({
+                    detail: "Request failed"
+                }));
+
+
+        throw new Error(
+            err.detail ||
+            "Request failed"
+        );
     }
 
-    if (res.status === 204) return null;
+
+    if (res.status === 204) {
+        return null;
+    }
+
+
     return res.json();
 }
 
+
 async function apiGet(url) {
+
     return apiFetch(url);
 }
 
+
 async function apiPost(url, data) {
-    return apiFetch(url, { method: "POST", body: JSON.stringify(data) });
+
+    return apiFetch(
+        url,
+        {
+            method: "POST",
+            body: JSON.stringify(data)
+        }
+    );
 }
+
 
 async function apiPut(url, data) {
-    return apiFetch(url, { method: "PUT", body: JSON.stringify(data) });
+
+    return apiFetch(
+        url,
+        {
+            method: "PUT",
+            body: JSON.stringify(data)
+        }
+    );
 }
+
 
 async function apiDelete(url) {
-    return apiFetch(url, { method: "DELETE" });
+
+    return apiFetch(
+        url,
+        {
+            method: "DELETE"
+        }
+    );
 }
 
-// ─── UI helpers ─────────────────────────────────────────────────
-function showAlert(container, message, type = "error") {
-    const div = document.createElement("div");
-    div.className = `alert alert-${type}`;
-    div.textContent = message;
+
+// ═══════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function showAlert(
+    container,
+    message,
+    type = "error"
+) {
+
+    const div =
+        document.createElement("div");
+
+
+    div.className =
+        `alert alert-${type}`;
+
+
+    div.textContent =
+        message;
+
+
     container.prepend(div);
-    setTimeout(() => div.remove(), 5000);
+
+
+    setTimeout(
+        () => div.remove(),
+        5000
+    );
 }
+
 
 function showLoading(container) {
-    container.innerHTML = `<div class="loading"><div class="spinner"></div> Loading...</div>`;
+
+    container.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            Loading...
+        </div>
+    `;
 }
+
 
 function formatDate(dateStr) {
-    if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-        year: "numeric", month: "short", day: "numeric"
-    });
-}
 
-function roundNum(val, decimals = 2) {
-    if (val == null || isNaN(val)) return "—";
-    return Number(val).toFixed(decimals);
-}
+    if (!dateStr) {
+        return "—";
+    }
 
-// ─── Navbar rendering ───────────────────────────────────────────
-function renderNavbar(activePage) {
-    const user = getUser();
-    const pages = [
-        { name: "Dashboard", href: "/dashboard", icon: "📊" },
-        { name: "Trees", href: "/trees", icon: "🌳" },
-        { name: "Citizen Science", href: "/citizen", icon: "👥" },
-        { name: "Climate Simulator", href: "/climate-scenarios", icon: "🌡️" },
-        { name: "Regions", href: "/regions", icon: "🌐" },
-        { name: "Soil Portal", href: "/soil", icon: "🌱" },
-        { name: "Map", href: "/map", icon: "🗺️" },
-        { name: "Analytics", href: "/analytics", icon: "📈" },
-        { name: "Satellite", href: "/satellite", icon: "🛰️" },
-        { name: "Reports", href: "/reports", icon: "📋" },
-        { name: "Alerts", href: "/alerts", icon: "🔔" },
-        { name: "Upload", href: "/upload", icon: "📤" },
-    ];
 
-    const navLinks = pages.map(p =>
-        `<a href="${p.href}" class="${p.name === activePage ? 'active' : ''}">${p.icon} ${p.name}</a>`
-    ).join("");
-
-    return `
-    <div class="navbar">
-        <div class="brand">
-            <span>🌿</span> Wild Tea Tree Platform
-        </div>
-        <button class="hamburger" onclick="document.querySelector('.navbar nav').classList.toggle('open')" aria-label="Toggle menu">☰</button>
-        <nav>${navLinks}</nav>
-        <div class="user-section">
-            <span>${user ? user.name : "Guest"}</span>
-            <button class="btn-logout" onclick="logout()">⏻ Logout</button>
-        </div>
-    </div>`;
+    return new Date(
+        dateStr
+    ).toLocaleDateString(
+        "en-US",
+        {
+            year: "numeric",
+            month: "short",
+            day: "numeric"
+        }
+    );
 }
 
 
-/* ============================================================
-   TEATREE MODERN NAVIGATION
-   ============================================================ */
+function roundNum(
+    val,
+    decimals = 2
+) {
 
-/*
-    IMPORTANT:
+    if (
+        val == null ||
+        isNaN(val)
+    ) {
+        return "—";
+    }
 
-    This function intentionally keeps the same function name
-    used by the existing TeaTree pages:
 
-        renderNavbar("Map")
-        renderNavbar("Trees")
-        renderNavbar("Soil Portal")
+    return Number(val)
+        .toFixed(decimals);
+}
 
-    Therefore existing HTML pages do NOT need to be rewritten.
-*/
 
-function renderNavbar(currentPage = "") {
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+
+function renderNavbar(activePage = "") {
+
+    const user =
+        getUser();
+
+
+    const page =
+        String(activePage)
+            .toLowerCase()
+            .trim();
+
 
     /*
-        Normalize page names used by existing pages.
+       Helper used to determine
+       which menu/group is active.
     */
 
-    const page = String(currentPage || "").toLowerCase();
+    function isActive(...names) {
 
-    const isActive = (...names) => {
-
-        return names.some(name =>
-            page.includes(String(name).toLowerCase())
+        return names.some(
+            name =>
+                page.includes(
+                    String(name)
+                        .toLowerCase()
+                )
         );
+    }
 
-    };
 
-
-    /*
-        DASHBOARD
-    */
+    // ───────────────────────────────────────────────────────────
+    // INDIVIDUAL PAGES
+    // ───────────────────────────────────────────────────────────
 
     const dashboardActive =
         isActive("dashboard");
 
 
-    /*
-        TREES
-    */
-
     const treesActive =
-        isActive("trees", "tree inventory");
+        isActive(
+            "trees",
+            "tree inventory"
+        );
 
-
-    /*
-        EXPLORE
-    */
 
     const mapActive =
         isActive("map");
 
-    const passportActive =
-        isActive("passport");
 
     const citizenActive =
-        isActive("citizen");
+        isActive(
+            "citizen",
+            "citizen science"
+        );
 
-
-    const exploreActive =
-        mapActive ||
-        passportActive ||
-        citizenActive;
-
-
-    /*
-        ANALYTICS
-    */
 
     const analyticsActive =
-        isActive("analytics");
+        isActive(
+            "analytics",
+            "analytics dashboard"
+        );
 
-    const ecosystemActive =
-        isActive("ecosystem", "ehi");
 
     const regionsActive =
-        isActive("regions", "regional");
+        isActive(
+            "regions",
+            "regional"
+        );
+
 
     const soilActive =
-        isActive("soil", "soil portal");
+        isActive(
+            "soil",
+            "soil portal"
+        );
 
-
-    const analyticsGroupActive =
-        analyticsActive ||
-        ecosystemActive ||
-        regionsActive ||
-        soilActive;
-
-
-    /*
-        MONITORING
-    */
-
-    const healthActive =
-        isActive("health", "tree health");
 
     const climateActive =
-        isActive("climate");
+        isActive(
+            "climate",
+            "climate simulator"
+        );
+
 
     const satelliteActive =
         isActive("satellite");
 
+
     const alertsActive =
         isActive("alerts");
 
+
     const lifecycleActive =
-        isActive("lifecycle");
+        isActive(
+            "lifecycle",
+            "lifecycle intelligence"
+        );
+
+
+    const reportsActive =
+        isActive("reports");
+
+
+    const uploadActive =
+        isActive("upload");
+
+
+    // ───────────────────────────────────────────────────────────
+    // GROUP ACTIVE STATES
+    // ───────────────────────────────────────────────────────────
+
+    const exploreActive =
+        mapActive ||
+        citizenActive;
+
+
+    const analyticsGroupActive =
+        analyticsActive ||
+        regionsActive ||
+        soilActive;
+
 
     const monitoringGroupActive =
-        healthActive ||
         climateActive ||
         satelliteActive ||
         alertsActive ||
         lifecycleActive;
 
 
-    /*
-        REPORTS
-    */
+    // ───────────────────────────────────────────────────────────
+    // USER NAME
+    // ───────────────────────────────────────────────────────────
 
-    const reportsActive =
-        isActive("reports");
-
-
-    /*
-        USER INFORMATION
-    */
-
-    let userName = "";
-
-    try {
-
-        const storedUser =
-            localStorage.getItem("user");
-
-        if (storedUser) {
-
-            const user =
-                JSON.parse(storedUser);
-
-            userName =
+    const userName =
+        user &&
+        (
+            user.name ||
+            user.username ||
+            user.email
+        )
+            ? (
                 user.name ||
                 user.username ||
-                user.email ||
-                "";
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Unable to read stored user:",
-            error
-        );
-
-    }
+                user.email
+            )
+            : "Guest";
 
 
-    /*
-        NAVIGATION HTML
-    */
+    // ───────────────────────────────────────────────────────────
+    // NAVBAR
+    // ───────────────────────────────────────────────────────────
 
     return `
 
-        <nav class="tt-navbar">
+        <div class="navbar">
 
-            <!-- =================================================
+
+            <!-- ═══════════════════════════════════════════════
                  BRAND
-                 ================================================= -->
+                 ═══════════════════════════════════════════════ -->
 
             <a
                 href="/dashboard"
-                class="tt-brand"
-                aria-label="TeaTree Dashboard">
+                class="brand"
+                aria-label="Wild Tea Tree Platform">
 
-                <span class="tt-brand-icon">
-                    🌿
-                </span>
+                <span>🌿</span>
 
-                <span class="tt-brand-text">
-                    TeaTree
+                <span>
+                    Wild Tea Tree Platform
                 </span>
 
             </a>
 
 
-            <!-- =================================================
-                 MOBILE MENU BUTTON
-                 ================================================= -->
+            <!-- ═══════════════════════════════════════════════
+                 MOBILE BUTTON
+                 ═══════════════════════════════════════════════ -->
 
             <button
-                type="button"
-                class="tt-mobile-btn"
-                id="tt-mobile-menu-btn"
-                aria-label="Open navigation"
-                aria-expanded="false"
-                onclick="toggleTeaTreeMobileMenu()">
+                class="hamburger"
+                onclick="toggleTeaTreeMobileMenu()"
+                aria-label="Toggle menu">
 
                 ☰
 
             </button>
 
 
-            <!-- =================================================
+            <!-- ═══════════════════════════════════════════════
                  MAIN NAVIGATION
-                 ================================================= -->
+                 ═══════════════════════════════════════════════ -->
 
-            <div
-                class="tt-nav"
-                id="tt-navigation">
+            <nav id="tea-main-nav">
 
 
-                <!-- =================================================
-                     DASHBOARD
-                     ================================================= -->
+                <!-- DASHBOARD -->
 
-                <div class="tt-nav-item">
+                <a
+                    href="/dashboard"
+                    class="${
+                        dashboardActive
+                            ? "active"
+                            : ""
+                    }">
 
-                    <a
-                        href="/dashboard"
-                        class="tt-nav-link ${dashboardActive ? "active" : ""}">
+                    📊 Dashboard
 
-                        <span>🏠</span>
-                        <span>Dashboard</span>
-
-                    </a>
-
-                </div>
+                </a>
 
 
-                <!-- =================================================
-                     TREES
-                     ================================================= -->
+                <!-- TREES -->
 
-                <div class="tt-nav-item">
+                <a
+                    href="/trees"
+                    class="${
+                        treesActive
+                            ? "active"
+                            : ""
+                    }">
 
-                    <a
-                        href="/trees"
-                        class="tt-nav-link ${treesActive ? "active" : ""}">
+                    🌳 Trees
 
-                        <span>🌳</span>
-                        <span>Trees</span>
-
-                    </a>
-
-                </div>
+                </a>
 
 
-                <!-- =================================================
+                <!-- ═══════════════════════════════════════
                      EXPLORE
-                     ================================================= -->
+                     ═══════════════════════════════════════ -->
 
                 <div
-                    class="tt-nav-item ${exploreActive ? "group-active" : ""}">
+                    class="
+                        nav-dropdown
+                        ${
+                            exploreActive
+                                ? "group-active"
+                                : ""
+                        }
+                    ">
 
-                    <a
-                        href="#"
-                        class="tt-nav-link ${exploreActive ? "active" : ""}"
-                        onclick="toggleTeaTreeDropdown(event, this)"
+
+                    <button
+                        type="button"
+                        class="nav-dropdown-btn"
+                        onclick="toggleTeaTreeDropdown(this)"
                         aria-haspopup="true"
                         aria-expanded="false">
 
-                        <span>🔎</span>
-                        <span>Explore</span>
+                        🔎 Explore
+                        <span>▾</span>
 
-                        <span class="tt-nav-arrow">
-                            ▼
-                        </span>
-
-                    </a>
+                    </button>
 
 
-                    <div class="tt-dropdown">
+                    <div class="nav-dropdown-menu">
 
 
                         <a
                             href="/map"
-                            class="${mapActive ? "active" : ""}">
+                            class="${
+                                mapActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🗺️</span>
-                            <span>Tree Map</span>
-
-                        </a>
-
-
-                        <a
-                            href="/tree_passport.html"
-                            class="${passportActive ? "active" : ""}">
-
-                            <span>🪪</span>
-                            <span>Tree Passport</span>
+                            🗺️ Tree Map
 
                         </a>
 
 
                         <a
                             href="/citizen"
-                            class="${citizenActive ? "active" : ""}">
+                            class="${
+                                citizenActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>👥</span>
-                            <span>Citizen Science</span>
+                            👥 Citizen Science
 
                         </a>
 
@@ -451,78 +538,72 @@ function renderNavbar(currentPage = "") {
                 </div>
 
 
-                <!-- =================================================
+                <!-- ═══════════════════════════════════════
                      ANALYTICS
-                     ================================================= -->
+                     ═══════════════════════════════════════ -->
 
                 <div
-                    class="tt-nav-item ${analyticsGroupActive ? "group-active" : ""}">
+                    class="
+                        nav-dropdown
+                        ${
+                            analyticsGroupActive
+                                ? "group-active"
+                                : ""
+                        }
+                    ">
 
-                    <a
-                        href="#"
-                        class="tt-nav-link ${analyticsGroupActive ? "active" : ""}"
-                        onclick="toggleTeaTreeDropdown(event, this)"
+
+                    <button
+                        type="button"
+                        class="nav-dropdown-btn"
+                        onclick="toggleTeaTreeDropdown(this)"
                         aria-haspopup="true"
                         aria-expanded="false">
 
-                        <span>📊</span>
-                        <span>Analytics</span>
+                        📈 Analytics
+                        <span>▾</span>
 
-                        <span class="tt-nav-arrow">
-                            ▼
-                        </span>
-
-                    </a>
+                    </button>
 
 
-                    <div class="tt-dropdown">
+                    <div class="nav-dropdown-menu">
 
 
                         <a
                             href="/analytics"
-                            class="${analyticsActive ? "active" : ""}">
+                            class="${
+                                analyticsActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>📈</span>
-                            <span>Analytics Dashboard</span>
-
-                        </a>
-
-
-                        <!--
-                            Ecosystem Health
-
-                            Only keep this item if your FastAPI
-                            frontend actually has an /ecosystem page.
-
-                            If it does not, this item is hidden.
-                        -->
-
-                        <a
-                            href="/analytics"
-                            class="${ecosystemActive ? "active" : ""}">
-
-                            <span>🌱</span>
-                            <span>Ecosystem Health</span>
+                            📊 Analytics Dashboard
 
                         </a>
 
 
                         <a
                             href="/regions"
-                            class="${regionsActive ? "active" : ""}">
+                            class="${
+                                regionsActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🌍</span>
-                            <span>Regional Comparison</span>
+                            🌍 Regional Comparison
 
                         </a>
 
 
                         <a
                             href="/soil"
-                            class="${soilActive ? "active" : ""}">
+                            class="${
+                                soilActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🪨</span>
-                            <span>Soil Health</span>
+                            🌱 Soil Portal
 
                         </a>
 
@@ -532,79 +613,85 @@ function renderNavbar(currentPage = "") {
                 </div>
 
 
-                <!-- =================================================
+                <!-- ═══════════════════════════════════════
                      MONITORING
-                     ================================================= -->
+                     ═══════════════════════════════════════ -->
 
                 <div
-                    class="tt-nav-item ${monitoringGroupActive ? "group-active" : ""}">
+                    class="
+                        nav-dropdown
+                        ${
+                            monitoringGroupActive
+                                ? "group-active"
+                                : ""
+                        }
+                    ">
 
-                    <a
-                        href="#"
-                        class="tt-nav-link ${monitoringGroupActive ? "active" : ""}"
-                        onclick="toggleTeaTreeDropdown(event, this)"
+
+                    <button
+                        type="button"
+                        class="nav-dropdown-btn"
+                        onclick="toggleTeaTreeDropdown(this)"
                         aria-haspopup="true"
                         aria-expanded="false">
 
-                        <span>🛰️</span>
-                        <span>Monitoring</span>
+                        🛰️ Monitoring
+                        <span>▾</span>
 
-                        <span class="tt-nav-arrow">
-                            ▼
-                        </span>
-
-                    </a>
+                    </button>
 
 
-                    <div class="tt-dropdown">
-
-
-                        <a
-                            href="/tree-health"
-                            class="${healthActive ? "active" : ""}">
-
-                            <span>❤️</span>
-                            <span>Tree Health</span>
-
-                        </a>
+                    <div class="nav-dropdown-menu">
 
 
                         <a
                             href="/climate-scenarios"
-                            class="${climateActive ? "active" : ""}">
+                            class="${
+                                climateActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🌡️</span>
-                            <span>Climate</span>
+                            🌡️ Climate Simulator
 
                         </a>
 
 
                         <a
                             href="/satellite"
-                            class="${satelliteActive ? "active" : ""}">
+                            class="${
+                                satelliteActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🛰️</span>
-                            <span>Satellite</span>
+                            🛰️ Satellite
 
                         </a>
 
 
                         <a
                             href="/alerts"
-                            class="${alertsActive ? "active" : ""}">
+                            class="${
+                                alertsActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🚨</span>
-                            <span>Alerts</span>
+                            🔔 Alerts
 
                         </a>
 
 
                         <a
                             href="/tea_lifecycle"
-                            class="${lifecycleActive ? "active" : ""}">
+                            class="${
+                                lifecycleActive
+                                    ? "active"
+                                    : ""
+                            }">
 
-                            <span>🌿</span>
-                            <span>Lifecycle Intelligence</span>
+                            🌿 Lifecycle Intelligence
 
                         </a>
 
@@ -614,169 +701,160 @@ function renderNavbar(currentPage = "") {
                 </div>
 
 
-                <!-- =================================================
-                     REPORTS
-                     ================================================= -->
+                <!-- REPORTS -->
 
-                <div class="tt-nav-item">
+                <a
+                    href="/reports"
+                    class="${
+                        reportsActive
+                            ? "active"
+                            : ""
+                    }">
 
-                    <a
-                        href="/reports"
-                        class="tt-nav-link ${reportsActive ? "active" : ""}">
+                    📋 Reports
 
-                        <span>📄</span>
-                        <span>Reports</span>
-
-                    </a>
-
-                </div>
+                </a>
 
 
-            </div>
+                <!-- UPLOAD -->
+
+                <a
+                    href="/upload"
+                    class="${
+                        uploadActive
+                            ? "active"
+                            : ""
+                    }">
+
+                    📤 Upload
+
+                </a>
 
 
-            <!-- =================================================
-                 USER AREA
-                 ================================================= -->
+            </nav>
 
-            <div class="tt-user-area">
 
-                ${
-                    userName
-                        ? `
-                            <span class="tt-user-name">
-                                ${escapeTeaTreeHTML(userName)}
-                            </span>
-                          `
-                        : ""
-                }
+            <!-- ═══════════════════════════════════════════════
+                 USER
+                 ═══════════════════════════════════════════════ -->
+
+            <div class="user-section">
+
+                <span>
+                    ${escapeHtml(userName)}
+                </span>
 
 
                 <button
-                    type="button"
-                    class="tt-logout-btn"
-                    onclick="teaTreeLogout()">
+                    class="btn-logout"
+                    onclick="logout()">
 
-                    Logout
+                    ⏻ Logout
 
                 </button>
 
             </div>
 
 
-        </nav>
+        </div>
 
     `;
 }
 
 
-/* ============================================================
-   HTML ESCAPE
-   ============================================================ */
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION DROPDOWN
+// ═══════════════════════════════════════════════════════════════
 
-function escapeTeaTreeHTML(value) {
+function toggleTeaTreeDropdown(button) {
 
-    const div =
-        document.createElement("div");
-
-    div.textContent =
-        String(value ?? "");
-
-    return div.innerHTML;
-}
+    const dropdown =
+        button.closest(
+            ".nav-dropdown"
+        );
 
 
-/* ============================================================
-   DROPDOWN HANDLER
-   ============================================================ */
-
-function toggleTeaTreeDropdown(event, element) {
-
-    event.preventDefault();
-    event.stopPropagation();
-
-
-    const currentItem =
-        element.closest(".tt-nav-item");
-
-
-    if (!currentItem) {
+    if (!dropdown) {
         return;
     }
 
 
-    const currentDropdown =
-        currentItem.querySelector(".tt-dropdown");
-
-
-    const currentlyOpen =
-        currentItem.classList.contains("open");
+    const wasOpen =
+        dropdown.classList.contains(
+            "open"
+        );
 
 
     /*
-        Close every other dropdown.
+       Close all other dropdowns.
     */
 
     document
-        .querySelectorAll(".tt-nav-item.open")
+        .querySelectorAll(
+            ".nav-dropdown.open"
+        )
         .forEach(item => {
 
-            if (item !== currentItem) {
+            if (item !== dropdown) {
 
-                item.classList.remove("open");
+                item.classList.remove(
+                    "open"
+                );
 
-                const link =
-                    item.querySelector(".tt-nav-link");
 
-                if (link) {
+                const btn =
+                    item.querySelector(
+                        ".nav-dropdown-btn"
+                    );
 
-                    link.setAttribute(
+
+                if (btn) {
+
+                    btn.setAttribute(
                         "aria-expanded",
                         "false"
                     );
-
                 }
-
             }
-
         });
 
 
     /*
-        Toggle current dropdown.
+       Toggle current dropdown.
     */
 
-    currentItem.classList.toggle(
+    dropdown.classList.toggle(
         "open",
-        !currentlyOpen
+        !wasOpen
     );
 
 
-    element.setAttribute(
+    button.setAttribute(
         "aria-expanded",
-        !currentlyOpen
+        !wasOpen
             ? "true"
             : "false"
     );
-
 }
 
 
-/* ============================================================
-   CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
-   ============================================================ */
+// ═══════════════════════════════════════════════════════════════
+// CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
+// ═══════════════════════════════════════════════════════════════
 
 document.addEventListener(
     "click",
     function(event) {
 
         if (
-            !event.target.closest(".tt-nav-item")
+            !event.target.closest(
+                ".nav-dropdown"
+            )
         ) {
 
             document
                 .querySelectorAll(
-                    ".tt-nav-item.open"
+                    ".nav-dropdown.open"
                 )
                 .forEach(item => {
 
@@ -785,14 +863,15 @@ document.addEventListener(
                     );
 
 
-                    const link =
+                    const button =
                         item.querySelector(
-                            ".tt-nav-link"
+                            ".nav-dropdown-btn"
                         );
 
-                    if (link) {
 
-                        link.setAttribute(
+                    if (button) {
+
+                        button.setAttribute(
                             "aria-expanded",
                             "false"
                         );
@@ -807,92 +886,44 @@ document.addEventListener(
 );
 
 
-/* ============================================================
-   MOBILE MENU
-   ============================================================ */
+// ═══════════════════════════════════════════════════════════════
+// MOBILE MENU
+// ═══════════════════════════════════════════════════════════════
 
 function toggleTeaTreeMobileMenu() {
 
-    const navigation =
+    const nav =
         document.getElementById(
-            "tt-navigation"
+            "tea-main-nav"
         );
 
 
-    const button =
-        document.getElementById(
-            "tt-mobile-menu-btn"
-        );
-
-
-    if (!navigation || !button) {
+    if (!nav) {
         return;
     }
 
 
-    const isOpen =
-        navigation.classList.toggle(
-            "mobile-open"
-        );
-
-
-    button.setAttribute(
-        "aria-expanded",
-        isOpen
-            ? "true"
-            : "false"
+    nav.classList.toggle(
+        "open"
     );
-
-
-    button.textContent =
-        isOpen
-            ? "✕"
-            : "☰";
-
 }
 
 
-/* ============================================================
-   LOGOUT
-   ============================================================ */
+// ═══════════════════════════════════════════════════════════════
+// HTML ESCAPE
+// ═══════════════════════════════════════════════════════════════
 
-function teaTreeLogout() {
+function escapeHtml(value) {
 
-    /*
-        Keep this intentionally compatible
-        with your existing authentication.
-    */
-
-    const possibleKeys = [
-
-        "token",
-        "access_token",
-        "auth_token",
-        "jwt",
-        "user"
-
-    ];
+    const div =
+        document.createElement(
+            "div"
+        );
 
 
-    possibleKeys.forEach(key => {
-
-        try {
-
-            localStorage.removeItem(key);
-
-        } catch (error) {
-
-            console.warn(
-                "Unable to remove localStorage key:",
-                key
-            );
-
-        }
-
-    });
+    div.textContent =
+        String(value ?? "");
 
 
-    window.location.href =
-        "/login";
-
+    return div.innerHTML;
 }
