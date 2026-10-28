@@ -26,6 +26,7 @@ from backend.routes.ecosystem_routes import router as ecosystem_router
 from backend.routes.region_routes import router as region_router
 from backend.routes.config_routes import router as config_router
 from backend.routes import lifecycle_routes
+from backend.routes.passport_routes import router as passport_router
 
 
 from contextlib import asynccontextmanager
@@ -71,6 +72,7 @@ app.include_router(ecosystem_router)
 app.include_router(region_router)
 app.include_router(config_router)
 app.include_router(lifecycle_routes.router)
+app.include_router(passport_router)
 
 # Ensure uploads directory exists
 os.makedirs("uploads", exist_ok=True)

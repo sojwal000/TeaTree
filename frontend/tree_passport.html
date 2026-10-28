@@ -1,224 +1,402 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tree Digital Passport — Wild Tea Tree Platform</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/qrcode.min.js"></script>
-    <style>
-        .passport-container {
-            max-width: 1000px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-        .passport-card {
-            background: var(--bg-card);
-            border: 2px solid var(--primary-light);
-            border-radius: var(--radius-lg);
-            padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-        }
-        .passport-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .passport-badge {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-            color: #fff;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-        .passport-grid {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 2rem;
-        }
-        @media (max-width: 800px) {
-            .passport-grid { grid-template-columns: 1fr; }
-        }
-        .tree-photo {
-            width: 100%;
-            height: 260px;
-            border-radius: var(--radius);
-            object-fit: cover;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-        }
-        .attr-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .attr-table td {
-            padding: 0.65rem 0.5rem;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 0.92rem;
-        }
-        .attr-table td.label {
-            font-weight: 600;
-            color: var(--text-light);
-            width: 40%;
-        }
-        .attr-table td.val {
-            font-weight: 700;
-            color: var(--text);
-        }
-        .qr-section {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            text-align: center;
-            margin-top: 2rem;
-        }
-        .qr-canvas-wrap {
-            background: #ffffff;
-            padding: 1rem;
-            border-radius: var(--radius);
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-sm);
-            margin: 0.75rem auto;
-            border: 1px solid var(--border-light);
-            min-width: 200px;
-            min-height: 200px;
-        }
-        .qr-canvas-wrap svg {
-            display: block;
-            margin: 0 auto;
-            max-width: 100%;
-            height: auto;
-        }
-        .qr-canvas-wrap canvas {
-            display: none;
-        }
-        .btn-qr {
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            padding: 0.65rem 1.25rem;
-            border-radius: var(--radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            margin: 0.25rem;
-            text-decoration: none;
-            font-size: 0.88rem;
-        }
-        .btn-qr:hover {
-            background: var(--primary-dark);
-            box-shadow: var(--shadow-sm);
-        }
-        .btn-qr-secondary {
-            background: #ffffff;
-            color: var(--primary-dark);
-            border: 1px solid var(--border);
-        }
-        .btn-qr-secondary:hover {
-            background: var(--bg-hover);
-        }
-        .tree-selector {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 0.75rem 1rem;
-            border-radius: var(--radius);
-            font-size: 0.95rem;
-            color: var(--text);
-            margin-bottom: 1.5rem;
-            width: 100%;
-            max-width: 400px;
-        }
-        .qr-url-pill {
-            display: inline-block;
-            background: #e8f5e9;
-            color: #1b4332;
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.82rem;
-            margin: 0.4rem 0 0.8rem 0;
-            border: 1px solid #c8e6c9;
-            word-break: break-all;
-            max-width: 100%;
-        }
-        .qr-network-config {
-            margin-top: 1rem;
-            padding-top: 0.85rem;
-            border-top: 1px dashed var(--border);
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .qr-network-input {
-            padding: 0.35rem 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 0.82rem;
-            font-family: monospace;
-            width: 230px;
-        }
-        .print-hide {
-            display: block;
-        }
-        @media print {
-            .print-hide, .navbar, .btn-qr, .qr-network-config, #tree-select-box {
-                display: none !important;
-            }
-            .passport-card {
-                box-shadow: none;
-                border: 1px solid #000;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tree Digital Passport | Wild Tea Tree Platform</title>
+<style>
+:root{--green:#1b4332;--green2:#2d6a4f;--mint:#d8f3dc;--ink:#18352a;--muted:#64748b;--line:#dbe5df;--panel:#fff;--page:#f2f7f3;--shadow:0 12px 34px rgba(22,61,43,.09);}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+a{color:var(--green2)}button,input{font:inherit}.page{max-width:1180px;margin:24px auto;padding:0 16px 32px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}.toolbar a,.toolbar button,.action{border:1px solid var(--line);background:#fff;color:var(--green);padding:9px 13px;border-radius:9px;font-weight:700;text-decoration:none;cursor:pointer}.passport{background:var(--panel);border:1px solid #b7d8c5;border-radius:15px;box-shadow:var(--shadow);overflow:hidden}.hero{padding:22px 26px;background:linear-gradient(110deg,#fff,#f0faf3);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px}.brand-icon{font-size:32px}.hero h1{margin:0;font-size:clamp(20px,3vw,29px);line-height:1.2;color:var(--green)}.hero p{margin:5px 0 0;color:var(--muted)}.idbox{text-align:right;min-width:210px}.badge{display:inline-block;background:var(--green);color:white;padding:6px 13px;border-radius:20px;font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.idbox small{display:block;color:var(--muted);margin-top:5px}.idbox code{font-size:12px;overflow-wrap:anywhere}.summary{display:grid;grid-template-columns:260px minmax(0,1fr);gap:22px;padding:24px}.photo{width:100%;height:250px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#e8f2eb}.healthbox{margin-top:12px;text-align:center;background:#dcfce7;border-radius:12px;padding:15px}.healthbox .score{font-size:35px;font-weight:900;color:var(--green);line-height:1.2}.healthbox .state{font-weight:800;color:#15803d}.facts{width:100%;border-collapse:collapse}.facts th,.facts td{text-align:left;padding:9px 8px;border-bottom:1px solid #e8efeb;vertical-align:top}.facts th{width:39%;color:#64748b;font-size:13px;font-weight:700}.facts td{font-weight:650;overflow-wrap:anywhere}.section{margin:0 24px 22px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}.section-head{padding:14px 17px;background:#f7fbf8;border-bottom:1px solid var(--line);font-size:17px;font-weight:850;color:var(--green)}.section-body{padding:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfdfb}.metric .label{font-size:12px;color:var(--muted);font-weight:750;text-transform:uppercase}.metric .value{font-size:20px;font-weight:850;color:var(--green);overflow-wrap:anywhere}.metric .sub{font-size:12px;color:var(--muted)}.table-wrap{overflow-x:auto}.data-table{width:100%;border-collapse:collapse;font-size:13px}.data-table th,.data-table td{padding:9px 8px;border-bottom:1px solid #e8efeb;text-align:left;vertical-align:top;overflow-wrap:anywhere}.data-table th{color:#64748b;background:#f8fbf9;white-space:nowrap}.list{margin:0;padding-left:20px}.list li{margin:5px 0}.notice{padding:12px 14px;border-radius:9px;background:#f1f5f9;color:#475569;font-size:13px}.qr-section{margin:0 24px 24px;background:#f5f8f6;border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center}.qr-canvas-wrap{display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:10px;padding:10px;min-width:220px;min-height:220px;margin:10px}.qr-canvas-wrap canvas{display:none}.qr-url{font:12px ui-monospace,monospace;overflow-wrap:anywhere;background:#e8f5e9;border:1px solid #c8e6c9;padding:8px;border-radius:7px}.qr-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}.qr-actions button,.qr-actions a{border:0;border-radius:8px;background:var(--green2);color:#fff;padding:9px 12px;text-decoration:none;font-weight:750;cursor:pointer}.qr-actions .secondary{background:white;color:var(--green);border:1px solid var(--line)}.host-config{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)}.host-config input{width:min(350px,100%);padding:8px;border:1px solid var(--line);border-radius:7px}.footer{padding:0 24px 22px;color:var(--muted);font-size:12px}.loading,.error{padding:30px;text-align:center}.error{color:#b91c1c}.missing{color:#94a3b8;font-weight:500}.empty{padding:12px;background:#f8fafc;color:#64748b;border-radius:8px}.print-hide{}@media(max-width:760px){.page{margin:10px auto;padding:0 9px 20px}.hero{padding:17px}.idbox{text-align:left}.summary{grid-template-columns:1fr;padding:14px}.photo{height:230px}.section{margin:0 12px 14px}.qr-section{margin:0 12px 14px}.footer{padding:0 12px 16px}.grid{grid-template-columns:1fr}.facts th{width:42%}.facts th,.facts td{padding:8px 5px;font-size:13px}}
+@media print{body{background:#fff}.page{max-width:none;margin:0;padding:0}.toolbar,.qr-actions,.host-config,.print-hide{display:none!important}.passport{box-shadow:none;border:1px solid #aaa}.section,.summary,.qr-section{break-inside:avoid}.hero{background:#fff}.photo{max-height:220px}}
+
+/* =========================================================
+   MOBILE / SMALL-SCREEN PASSPORT LAYOUT
+   Responsive refinements: phones, narrow phones, touch controls
+   ========================================================= */
+
+/* Prevent accidental page-wide horizontal scrolling */
+html {
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+.page,
+.passport,
+.section,
+.section-body,
+.summary,
+.hero {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Tablet and phone */
+@media (max-width: 760px) {
+  .page {
+    width: 100%;
+    margin: 8px auto;
+    padding: 0 8px 18px;
+  }
+
+  .toolbar {
+    width: 100%;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .toolbar a,
+  .toolbar button {
+    min-height: 42px;
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+
+  .passport {
+    border-radius: 12px;
+  }
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px 14px;
+  }
+
+  .brand {
+    align-items: flex-start;
+    gap: 9px;
+  }
+
+  .brand-icon {
+    font-size: 26px;
+    line-height: 1.2;
+    flex: 0 0 auto;
+  }
+
+  .hero h1 {
+    font-size: clamp(19px, 5.4vw, 25px);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .idbox {
+    min-width: 0;
+    width: 100%;
+    text-align: left;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 4px;
+  }
+
+  .idbox .badge {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  .idbox code {
+    display: block;
+    width: 100%;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    min-height: 150px;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .healthbox {
+    margin-top: 10px;
+    padding: 12px;
+  }
+
+  .healthbox .score {
+    font-size: 30px;
+  }
+
+  /* Compact tree fact rows into label/value blocks on phone */
+  .facts,
+  .facts tbody,
+  .facts tr,
+  .facts th,
+  .facts td {
+    display: block;
+    width: 100%;
+  }
+
+  .facts {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .facts tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 9px 0;
+    border-bottom: 1px solid #e8efeb;
+  }
+
+  .facts th,
+  .facts td {
+    border: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .facts th {
+    font-size: 11px;
+    line-height: 1.35;
+    text-transform: uppercase;
+    letter-spacing: .035em;
+  }
+
+  .facts td {
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .section {
+    margin: 0 8px 12px;
+    border-radius: 10px;
+  }
+
+  .section-head {
+    padding: 12px 13px;
+    font-size: 15px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .section-body {
+    padding: 12px;
+  }
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .metric {
+    padding: 11px;
+  }
+
+  .metric .value {
+    font-size: 18px;
+    line-height: 1.35;
+  }
+
+  /* Keep wide data tables contained and scrollable, not clipped */
+  .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 7px;
+  }
+
+  .data-table {
+    min-width: 560px;
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 7px;
+  }
+
+  .list {
+    padding-left: 19px;
+  }
+
+  .notice,
+  .empty {
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .qr-section {
+    margin: 0 8px 14px;
+    padding: 13px 10px;
+  }
+
+  .qr-section h2,
+  .qr-section h3 {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  .qr-url {
+    width: 100%;
+    font-size: 10px;
+    line-height: 1.45;
+    word-break: break-all;
+  }
+
+  .qr-canvas-wrap {
+    width: min(100%, 240px);
+    min-width: 0;
+    min-height: 0;
+    padding: 8px;
+    margin: 10px auto;
+  }
+
+  .qr-canvas-wrap canvas,
+  .qr-canvas-wrap img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .qr-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 10px 0;
+  }
+
+  .qr-actions button,
+  .qr-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
+    padding: 9px 8px;
+    font-size: 12px;
+    line-height: 1.3;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .host-config {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+    gap: 8px;
+    text-align: left;
+    font-size: 12px;
+  }
+
+  .host-config input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .host-config button,
+  .host-config .action {
+    min-height: 42px;
+  }
+
+  .footer {
+    padding: 0 10px 14px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+}
+
+/* Narrow phones (e.g. 320–390px wide) */
+@media (max-width: 420px) {
+  .page {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .toolbar a,
+  .toolbar button {
+    width: 100%;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .hero {
+    padding: 13px 10px;
+  }
+
+  .summary {
+    padding: 10px;
+  }
+
+  .section,
+  .qr-section {
+    margin-left: 5px;
+    margin-right: 5px;
+  }
+
+  .section-body {
+    padding: 10px;
+  }
+
+  .facts td {
+    font-size: 13px;
+  }
+
+  .qr-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .qr-actions button,
+  .qr-actions a {
+    min-height: 42px;
+    font-size: 13px;
+  }
+}
+
+/* Respect users who prefer reduced animation */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+</style>
 </head>
 <body>
-    <div id="navbar"></div>
-
-    <div class="passport-container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;" class="print-hide">
-            <div>
-                <a href="/trees" class="btn btn-secondary btn-sm" style="text-decoration: none;">← Back to Tree Registry</a>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Print Passport</button>
-            </div>
-        </div>
-
-        <div id="tree-select-box" style="margin-bottom: 1.5rem;" class="print-hide">
-            <label for="tree-select" style="font-weight: 700; margin-right: 0.5rem; font-size: 0.9rem;">Select Tree to View:</label>
-            <select id="tree-select" class="tree-selector" onchange="onTreeSelectChange(this.value)">
-                <option value="">Loading trees...</option>
-            </select>
-        </div>
-
-        <div id="passport-content">
-            <div class="loading"><div class="spinner"></div> Loading Digital Passport...</div>
-        </div>
-    </div>
-
-    <script src="/static/app.js"></script>
-
+<main class="page">
+  <div class="toolbar print-hide"><a href="/trees">← Tree Registry</a><button onclick="window.print()">🖨 Print Passport</button></div>
+  <div id="passport-content" class="passport"><div class="loading">Loading complete tree passport…</div></div>
+</main>
     <!-- Embedded Fail-Safe QR Code Generator Engine -->
     <script>
     (function () {
@@ -543,257 +721,55 @@
     })();
     </script>
 
-    <script>
-        if (!requireAuth()) throw new Error("Not authenticated");
-        document.getElementById("navbar").innerHTML = renderNavbar("Trees");
-
-        let currentTreeId = "";
-        let currentTreeData = null;
-        let allTreesCache = [];
-
-        function getEffectiveBaseUrl() {
-            const savedHost = localStorage.getItem("tea_custom_qr_host");
-            if (savedHost && savedHost.trim().length > 0) {
-                return savedHost.trim().replace(/\/$/, "");
-            }
-            if (window.location.origin && window.location.origin !== "null" && window.location.origin !== "file://") {
-                return window.location.origin;
-            }
-            return "http://localhost:8000";
-        }
-
-        function updateCustomHost(newHost) {
-            if (newHost && newHost.trim()) {
-                localStorage.setItem("tea_custom_qr_host", newHost.trim().replace(/\/$/, ""));
-            } else {
-                localStorage.removeItem("tea_custom_qr_host");
-            }
-            regenerateActiveQR();
-        }
-
-        async function initPassport() {
-            const urlParams = new URLSearchParams(window.location.search);
-            currentTreeId = urlParams.get("id");
-
-            try {
-                const trees = await apiGet("/api/trees?limit=100");
-                allTreesCache = trees;
-                
-                const selectEl = document.getElementById("tree-select");
-                if (trees && trees.length > 0) {
-                    selectEl.innerHTML = trees.map(t => 
-                        `<option value="${t.tree_id}" ${t.tree_id === currentTreeId ? 'selected' : ''}>
-                            ${t.location_name} (ID: ${t.tree_id.substring(0, 8)}...)
-                        </option>`
-                    ).join("");
-
-                    if (!currentTreeId) {
-                        currentTreeId = trees[0].tree_id;
-                        selectEl.value = currentTreeId;
-                    }
-                } else {
-                    selectEl.innerHTML = `<option value="">No trees registered</option>`;
-                }
-
-                if (currentTreeId) {
-                    loadTreePassport(currentTreeId);
-                } else {
-                    document.getElementById("passport-content").innerHTML = `
-                        <div class="alert alert-info">No trees found in the database. Please add a tree first.</div>
-                    `;
-                }
-            } catch (err) {
-                console.error("Failed to load trees list:", err);
-                if (currentTreeId) {
-                    loadTreePassport(currentTreeId);
-                }
-            }
-        }
-
-        function onTreeSelectChange(treeId) {
-            if (!treeId) return;
-            currentTreeId = treeId;
-            const newUrl = `${window.location.pathname}?id=${treeId}`;
-            window.history.pushState({ path: newUrl }, '', newUrl);
-            loadTreePassport(treeId);
-        }
-
-        async function loadTreePassport(treeId) {
-            const container = document.getElementById("passport-content");
-            container.innerHTML = `<div class="loading"><div class="spinner"></div> Generating Digital Tree Passport...</div>`;
-
-            try {
-                const tree = await apiGet(`/api/trees/${treeId}`);
-                currentTreeData = tree;
-
-                let ehi = { ecosystem_health_index: 78, status: "Healthy" };
-                try {
-                    const ehiRes = await apiGet(`/api/environmental/ehi/${treeId}`);
-                    if (ehiRes) ehi = ehiRes;
-                } catch (e) {}
-
-                const baseUrl = getEffectiveBaseUrl();
-                const passportUrl = `${baseUrl}/tree_passport.html?id=${tree.tree_id}`;
-
-                container.innerHTML = `
-                <div class="passport-card" id="passport-card-element">
-                    <div class="passport-header">
-                        <div>
-                            <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom: 0.3rem;">
-                                <span style="font-size: 1.6rem;">🌿</span>
-                                <h1 style="margin: 0; font-size: 1.5rem; color: var(--primary-dark);">Wild Tea Tree Digital Passport</h1>
-                            </div>
-                            <p style="margin: 0; color: var(--text-light); font-size: 0.9rem;">Verified Botanical Registry & Traceability Record</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <div class="passport-badge">Certified Specimen</div>
-                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">PASSPORT ID</div>
-                            <strong style="font-size: 1.05rem; color: var(--primary); font-family: monospace;">${tree.tree_id}</strong>
-                        </div>
-                    </div>
-
-                    <div class="passport-grid">
-                        <div>
-                            <img src="${(tree.images && tree.images[0]) || 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&auto=format&fit=crop'}" alt="Wild Tea Tree Photo" class="tree-photo" onerror="this.src='https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&auto=format&fit=crop'">
-                            
-                            <div style="margin-top: 1rem; background: var(--accent-light); padding: 1rem; border-radius: var(--radius); text-align: center;">
-                                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--primary-dark);">Health Score</div>
-                                <div style="font-size: 2.2rem; font-weight: 800; color: var(--primary-dark);">${tree.health_score || 78} / 100</div>
-                                <span style="font-weight: 700; color: ${(tree.health_score || 78) >= 70 ? 'var(--success)' : 'var(--warning)'};">🟢 ${(tree.health_score || 78) >= 70 ? 'Healthy' : 'At Risk'}</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <table class="attr-table">
-                                <tr><td class="label">Location Name</td><td class="val">📍 ${tree.location_name || 'Assam Wild Region'}</td></tr>
-                                <tr><td class="label">GPS Coordinates</td><td class="val">${tree.latitude ? tree.latitude.toFixed(6) : '26.750000'}, ${tree.longitude ? tree.longitude.toFixed(6) : '94.200000'}</td></tr>
-                                <tr><td class="label">Elevation</td><td class="val">⛰️ ${tree.elevation || 1500} m above sea level</td></tr>
-                                <tr><td class="label">Height</td><td class="val">📏 ${tree.height || 10.5} meters</td></tr>
-                                <tr><td class="label">Trunk Diameter</td><td class="val">⭕ ${tree.diameter || 42.0} cm</td></tr>
-                                <tr><td class="label">Estimated Age / Ring Count</td><td class="val">⏳ ${tree.ring_count || 120} years</td></tr>
-                                <tr><td class="label">Ecosystem Health Index</td><td class="val">🌱 ${ehi.ecosystem_health_index || 78} / 100 (${ehi.status || 'Healthy'})</td></tr>
-                                <tr><td class="label">Tree Uses</td><td class="val">🍃 Germplasm Preservation, Wild Leaf Harvesting</td></tr>
-                                <tr><td class="label">First Registered</td><td class="val">📅 ${formatDate(tree.created_at || new Date())}</td></tr>
-                            </table>
-
-                            <!-- Live Dynamic QR Code Section -->
-                            <div class="qr-section">
-                                <h3 style="font-size: 1.1rem; color: var(--primary-dark); margin-bottom: 0.3rem;">📱 Live Dynamic QR Code</h3>
-                                <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 0.4rem;">Scan to open this tree's real-time digital profile directly from MongoDB.</p>
-                                
-                                <div>
-                                    <div style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem;">QR Code Link:</div>
-                                    <div class="qr-url-pill" id="qr-url-text">${passportUrl}</div>
-                                </div>
-
-                                <div class="qr-canvas-wrap">
-                                    <div id="qr-svg-container" style="display: flex; align-items: center; justify-content: center; min-width: 180px; min-height: 180px;"></div>
-                                    <canvas id="qr-canvas" width="180" height="180"></canvas>
-                                </div>
-
-                                <div style="margin-top: 0.5rem;">
-                                    <button class="btn-qr" onclick="regenerateActiveQR()">🔄 Regenerate QR</button>
-                                    <button class="btn-qr btn-qr-secondary" onclick="downloadQR()">💾 Download QR Code</button>
-                                    <button class="btn-qr btn-qr-secondary" onclick="copyQRLink()">📋 Copy Link</button>
-                                    <a href="${passportUrl}" target="_blank" class="btn-qr btn-qr-secondary">↗️ Open Link</a>
-                                </div>
-
-                                <div class="qr-network-config">
-                                    <span>📶 Phone / LAN Access IP:</span>
-                                    <input type="text" id="host-override-input" class="qr-network-input" value="${baseUrl}" placeholder="e.g. http://192.168.1.5:8000">
-                                    <button onclick="updateCustomHost(document.getElementById('host-override-input').value)" class="btn-qr" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; margin: 0;">Apply Host</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-
-                // Render the QR code immediately
-                generateQR(passportUrl);
-            } catch (err) {
-                console.error("Failed to render passport:", err);
-                container.innerHTML = `<div class="alert alert-error">Failed to load passport: ${err.message}</div>`;
-            }
-        }
-
-        function regenerateActiveQR() {
-            if (!currentTreeData) return;
-            const baseUrl = getEffectiveBaseUrl();
-            const passportUrl = `${baseUrl}/tree_passport.html?id=${currentTreeData.tree_id}`;
-            const urlEl = document.getElementById("qr-url-text");
-            if (urlEl) urlEl.textContent = passportUrl;
-            generateQR(passportUrl);
-        }
-
-        function generateQR(text) {
-            try {
-                if (typeof window.renderDirectQR === 'function') {
-                    window.renderDirectQR(text, "qr-svg-container", "qr-canvas", {
-                        width: 180,
-                        colorDark: "#1b4332",
-                        colorLight: "#ffffff"
-                    });
-                } else if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
-                    const canvas = document.getElementById("qr-canvas");
-                    if (canvas) {
-                        QRCode.toCanvas(canvas, text, {
-                            width: 180,
-                            margin: 2,
-                            colorDark: "#1b4332",
-                            colorLight: "#ffffff"
-                        });
-                        canvas.style.display = "block";
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to generate QR code:", err);
-            }
-        }
-
-        function downloadQR() {
-            try {
-                const canvas = document.getElementById("qr-canvas");
-                const treeId = currentTreeData ? currentTreeData.tree_id.substring(0, 8) : "passport";
-                
-                if (canvas && canvas.toDataURL) {
-                    const image = canvas.toDataURL("image/png");
-                    const link = document.createElement('a');
-                    link.download = `tree-${treeId}-passport-qr.png`;
-                    link.href = image;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } else {
-                    const svg = document.getElementById("qr-svg-graphic");
-                    if (svg) {
-                        const svgData = new XMLSerializer().serializeToString(svg);
-                        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-                        const svgUrl = URL.createObjectURL(svgBlob);
-                        const downloadLink = document.createElement("a");
-                        downloadLink.href = svgUrl;
-                        downloadLink.download = `tree-${treeId}-passport-qr.svg`;
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to download QR code:", e);
-            }
-        }
-
-        function copyQRLink() {
-            if (!currentTreeData) return;
-            const baseUrl = getEffectiveBaseUrl();
-            const passportUrl = `${baseUrl}/tree_passport.html?id=${currentTreeData.tree_id}`;
-            navigator.clipboard.writeText(passportUrl).then(() => {
-                alert("QR Code Link copied to clipboard:\n" + passportUrl);
-            }).catch(() => {
-                prompt("Copy this passport link:", passportUrl);
-            });
-        }
-
-        initPassport();
-    </script>
+<script>
+'use strict';
+let passportData=null;
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const has=value=>value!==null&&value!==undefined&&value!=='';
+const val=(value,unit='')=>has(value)?`${esc(value)}${unit}`:'<span class="missing">Not available</span>';
+const dateVal=value=>{if(!has(value))return 'Not available';const d=new Date(value);return isNaN(d)?esc(value):esc(d.toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric'}));};
+const num=(value,d=2)=>has(value)&&Number.isFinite(Number(value))?Number(value).toFixed(d):'Not available';
+function section(title,body){return `<section class="section"><div class="section-head">${title}</div><div class="section-body">${body||'<div class="empty">No data is available for this section.</div>'}</div></section>`;}
+function metric(label,value,sub=''){return `<div class="metric"><div class="label">${label}</div><div class="value">${value}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;}
+function table(headers,rows){if(!rows||!rows.length)return '<div class="empty">No records available for this tree.</div>';return `<div class="table-wrap"><table class="data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c??'<span class="missing">Not available</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
+function jsonList(items){if(!Array.isArray(items)||!items.length)return '<div class="empty">No records available.</div>';return `<ul class="list">${items.map(x=>`<li>${esc(typeof x==='string'?x:JSON.stringify(x))}</li>`).join('')}</ul>`;}
+async function fetchOptional(url){try{const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json();}catch(e){console.info('Optional passport source unavailable:',url,e.message);return null;}}
+function getBaseUrl(){const saved=localStorage.getItem('tea_custom_qr_host');return saved&&saved.trim()?saved.trim().replace(/\/$/,''):window.location.origin;}
+function makeQR(){if(!passportData)return;const url=`${getBaseUrl()}/tree_passport.html?id=${encodeURIComponent(passportData.tree.tree_id)}`;$('qr-url-text').textContent=url;const canvas=$('qr-canvas');const svg=$('qr-svg-container');svg.innerHTML='';canvas.style.display='none';if(typeof window.renderDirectQR==='function'){window.renderDirectQR(url,'qr-svg-container','qr-canvas',{width:190,colorDark:'#1b4332',colorLight:'#ffffff'});}else{$('qr-message').textContent='QR renderer could not initialize. Copy the link below.';}}
+function applyHost(){const host=$('host-override-input').value.trim();if(host&&!/^https?:\/\//i.test(host)){alert('Enter a complete URL beginning with http:// or https://');return;}if(host)localStorage.setItem('tea_custom_qr_host',host.replace(/\/$/,''));else localStorage.removeItem('tea_custom_qr_host');makeQR();}
+function copyLink(){const url=$('qr-url-text').textContent;navigator.clipboard?.writeText(url).then(()=>alert('Passport link copied.')).catch(()=>prompt('Copy passport link:',url));}
+function downloadQR(){const canvas=$('qr-canvas');if(canvas&&canvas.toDataURL){const a=document.createElement('a');a.download=`tree-${passportData.tree.tree_id.slice(0,8)}-passport-qr.png`;a.href=canvas.toDataURL('image/png');a.click();return;}const svg=$('qr-svg-graphic');if(svg){const blob=new Blob([new XMLSerializer().serializeToString(svg)],{type:'image/svg+xml'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tree-${passportData.tree.tree_id.slice(0,8)}-passport-qr.svg`;a.click();}}
+function mapLink(t){if(!has(t.latitude)||!has(t.longitude))return '<span class="missing">Coordinates not available</span>';const url=`https://www.google.com/maps?q=${encodeURIComponent(`${t.latitude},${t.longitude}`)}`;return `<a href="${url}" target="_blank" rel="noopener">Open location in map ↗</a>`;}
+function renderPassport(d,extra){const t=d.tree||{},h=d.health||{},e=d.environment||{},eco=d.ecosystem||{},soil=extra.soil,climate=extra.climate,satellite=extra.satellite,mort=d.mortality||{},med=extra.medicinal?.profile||extra.medicinal||{},post=extra.postdeath?.profile||extra.postdeath||{};const healthScore=h.current_score;const healthStatus=h.current_status|| (has(healthScore)?(healthScore>=80?'Healthy':healthScore>=60?'Moderate':healthScore>=40?'At Risk':'Unhealthy'):'Not assessed');const img=(t.images||[]).find(Boolean);const status=d.death_record?'Recorded as dead':(t.life_status||'Active / status not recorded');
+const facts=[['Scientific name','Camellia sinensis'],['Location',t.location_name],['Country',t.country],['Latitude',has(t.latitude)?num(t.latitude,6):null],['Longitude',has(t.longitude)?num(t.longitude,6):null],['Elevation',has(t.elevation)?`${num(t.elevation,1)} m`:null],['Height',has(t.height)?`${num(t.height,2)} m`:null],['Trunk diameter',has(t.diameter)?`${num(t.diameter,2)} cm`:null],['Estimated ring count / age',has(t.ring_count)?`${esc(t.ring_count)} rings (age estimate)`:null],['Tree life status',status],['Registered',dateVal(t.created_at)],['Last updated',dateVal(t.updated_at)]];
+const healthRows=(h.records||[]).map(x=>[dateVal(x.analyzed_at||x.created_at),val(x.health_score??x.score),val(x.health_status??x.status),val(x.image_path),val((x.issues||[]).map(i=>i.type||i).join(', '))]);
+const envRows=(e.records||[]).map(x=>[dateVal(x.timestamp),val(x.temperature,' °C'),val(x.humidity,' %'),val(x.rainfall??x.precipitation,' mm'),val(x.wind_speed,' m/s'),val(x.soil_moisture)]);
+const soilProps=soil?.soil_parameters||soil?.parameters||soil?.properties||[];
+const soilRows=Array.isArray(soilProps)?soilProps.map(x=>[val(x.name),val(x.value),val(x.unit),val(x.rating),val(x.optimal)]):Object.entries(soilProps).map(([k,v])=>[esc(k),val(typeof v==='object'?v.value:v),val(typeof v==='object'?v.unit:''),val(typeof v==='object'?v.rating:''),val(typeof v==='object'?v.optimal:'')]);
+const climateCurrent=climate?.current||{};const forecast=climate?.forecast_7day||climate?.forecast||[];const satRecords=satellite?.daily||satellite?.records||satellite?.data||[];
+const ehi=eco.latest?.ecosystem_health_index??eco.latest?.ehi??eco.calculated?.ecosystem_health_index;
+const death=d.death_record;
+$('passport-content').innerHTML=`<div class="hero"><div class="brand"><span class="brand-icon">🌿</span><div><h1>Wild Tea Tree Digital Passport</h1><p>Public botanical profile and tree-linked research record</p></div></div><div class="idbox"><span class="badge">${esc(status)}</span><small>Passport ID</small><code>${esc(t.tree_id)}</code></div></div>
+<div class="summary"><div><img class="photo" src="${esc(img||'')}" alt="Tree specimen photo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><div class="empty" style="display:none">No tree photograph is registered.</div><div class="healthbox"><div style="font-size:12px;font-weight:800;text-transform:uppercase">Health score</div><div class="score">${has(healthScore)?`${num(healthScore,1)} / 100`:'N/A'}</div><div class="state">${esc(healthStatus)}</div></div></div><div><table class="facts"><tbody>${facts.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${has(v)?v:'<span class="missing">Not available</span>'}</td></tr>`).join('')}<tr><th>Map</th><td>${mapLink(t)}</td></tr></tbody></table></div></div>
+${section('📏 Tree identity and measurements',`<div class="grid">${metric('Tree ID',esc(t.tree_id||'Not available'))}${metric('Location',esc(t.location_name||'Not available'))}${metric('Height',val(t.height,' m'))}${metric('Diameter',val(t.diameter,' cm'))}${metric('Elevation',val(t.elevation,' m'))}${metric('Ring count',val(t.ring_count))}</div>`)}
+${section('❤️ Health status and health history',`<div class="grid">${metric('Current score',has(healthScore)?`${num(healthScore,1)} / 100`:'Not assessed',esc(healthStatus))}${metric('Assessments',String((h.records||[]).length))}</div><h4>Recorded assessments</h4>${table(['Date','Score','Status','Image','Issues'],healthRows)}<h4>Other health check records</h4>${table(['Date','Score','Status','Details'],(h.checks||[]).map(x=>[dateVal(x.created_at||x.timestamp),val(x.health_score??x.score),val(x.health_status??x.status),val(x.description??x.notes)]))}`)}
+${section('🌦️ Environmental observations',`<div class="grid">${metric('Latest temperature',val(e.latest?.temperature,' °C'))}${metric('Latest humidity',val(e.latest?.humidity,' %'))}${metric('Latest rainfall',val(e.latest?.rainfall??e.latest?.precipitation,' mm'))}${metric('Environmental records',String((e.records||[]).length))}</div><h4>Observation history</h4>${table(['Date','Temperature','Humidity','Rainfall','Wind','Soil moisture'],envRows)}`)}
+${section('🌱 Soil health and tea suitability',soil?`<div class="grid">${metric('Suitability score',val(soil.suitability?.score??soil.score,' / 100'))}${metric('Suitability class',esc(soil.prediction?.class??soil.prediction?.label??'Not available'))}</div><h4>Soil parameters</h4>${table(['Parameter','Value','Unit','Rating','Optimal'],soilRows)}<h4>Limiting factors</h4>${jsonList(soil.prediction?.restricting_factors||soil.restricting_factors)}<h4>Recommendations</h4>${jsonList(soil.prediction?.fertilizer_recommendations||soil.fertilizer_recommendations)}<p class="notice">Soil properties may be external SoilGrids estimates or project fallback values. Refer to the Soil Portal for the source and limitations.</p>`:'<div class="empty">Soil data is currently unavailable. See the Soil Portal or retry later.</div>')}
+${section('🌍 Ecosystem Health Index',`<div class="grid">${metric('EHI',has(ehi)?`${num(ehi,1)} / 100`:'Not available',esc(eco.latest?.status||eco.calculated?.status||'Status unavailable'))}${metric('Saved EHI records',String((eco.records||[]).length))}</div>${table(['Date','EHI','Status','Region'],(eco.records||[]).map(x=>[dateVal(x.created_at||x.timestamp),val(x.ecosystem_health_index??x.ehi),val(x.status),val(x.region)]))}<p class="notice">The project stores EHI only if an EHI record was saved. A missing score is not replaced with a fabricated value.</p>`)}
+${section('🌡️ Climate information',climate?`<div class="grid">${metric('Current temperature',val(climateCurrent.temperature,' °C'))}${metric('Humidity',val(climateCurrent.humidity,' %'))}${metric('Wind',val(climateCurrent.wind_speed,' km/h'))}${metric('Precipitation',val(climateCurrent.precipitation,' mm'))}</div><h4>7-day forecast</h4>${table(['Date','Min temp','Max temp','Rainfall','Conditions'],forecast.map(x=>[dateVal(x.date),val(x.temp_min,' °C'),val(x.temp_max,' °C'),val(x.precipitation,' mm'),val(x.weather_description)]))}`:'<div class="empty">Live climate data could not be loaded. The Climate Simulator may contain additional tools.</div>')}
+${section('🛰️ Satellite / vegetation observations',satellite?`<div class="grid">${metric('Vegetation index',val(satellite.summary?.vegetation_health_index))}${metric('Period',val(satellite.period?.days,' days'))}${metric('Mean temperature',val(satellite.summary?.avg_temperature,' °C'))}${metric('Total precipitation',val(satellite.summary?.total_precipitation_mm,' mm'))}</div>${table(['Date','Index','Temperature','Rainfall','Solar radiation'],satRecords.map(x=>[dateVal(x.date),val(x.vegetation_index??x.vhi),val(x.temperature??x.temp,' °C'),val(x.precipitation,' mm'),val(x.solar_radiation)]))}<p class="notice">Satellite module values are vegetation/environment proxies provided by the existing platform; they are not necessarily direct satellite imagery or a laboratory diagnosis.</p>`:'<div class="empty">Satellite/vegetation data is unavailable right now.</div>')}
+${section('⚠️ Mortality risk assessment',mort&&has(mort.mortality_risk_score)?`<div class="grid">${metric('Risk score',`${num(mort.mortality_risk_score,1)} / 100`)}${metric('Risk level',esc(mort.risk_level||'Not available'))}</div><p>${esc(mort.disclaimer||'Rule-based prototype assessment')}</p><h4>Risk factors</h4>${jsonList(mort.factors)}<h4>Recommendations</h4>${jsonList(mort.recommendations)}<p class="notice">This is an experimental rule-based project model, not a validated biological prediction of tree death. It must not be used as a substitute for expert field assessment.</p>`:'<div class="empty">Mortality risk has not been calculated or is unavailable.</div>')}
+${section('🍃 Medicinal / bioactive research profile',med&&Object.keys(med).length?`<p>${esc(med.description||med.title||'Species-level research information for Camellia sinensis.')}</p><h4>Plant parts</h4>${table(['Part','Importance','Compounds','Research areas'],(med.plant_parts||[]).map(x=>[val(x.part),val(x.importance),val((x.compounds||[]).join(', ')),val((x.research_areas||[]).join(', '))]))}<h4>Major compounds</h4>${table(['Compound','Full name','Category','Research interest'],(med.major_compounds||[]).map(x=>[val(x.name),val(x.full_name),val(x.category),val(x.research_interest)]))}<p class="notice">Species-level research information, not a tree-specific chemical test, medical advice, treatment, or dosage recommendation.</p>`:'<div class="empty">Medicinal profile unavailable.</div>')}
+${section('♻️ Potential post-death utilization',post&&Object.keys(post).length?`<p>${esc(post.description||'Potential utilization options for suitable tree biomass.')}</p>${table(['Use','Potential','Material','Notes'],(post.uses||[]).map(x=>[val(x.name??x.use),val(x.potential??x.importance),val(x.material??x.parts),val(x.description??x.notes)]))}<p class="notice">Diseased or contaminated biomass should not automatically be composted or reused. Disposal and utilization require appropriate expert assessment.</p>`:'<div class="empty">Post-death utilization profile unavailable.</div>')}
+${section('🧾 Conservation anomalies and death record',`<h4>Recorded death event</h4>${death?table(['Recorded at','Reason','Notes','Status'],[[dateVal(death.recorded_at||death.created_at),val(death.reason),val(death.notes),val(death.life_status)] ]):'<div class="empty">No death event is recorded for this tree.</div>'}<h4>Conservation / anomaly records</h4>${table(['Date','Type','Severity','Status','Description'],(d.conservation_anomalies||[]).map(x=>[dateVal(x.created_at),val(x.type??x.anomaly_type),val(x.severity),val(x.status),val(x.description)]))}`)}
+${section('📚 Data provenance and availability',`<p>Passport data is retrieved for this tree ID from the TeaTree backend at the time this page is opened.</p><div class="grid">${metric('Environment records',String((e.records||[]).length))}${metric('Health assessments',String((h.records||[]).length))}${metric('Ecosystem records',String((eco.records||[]).length))}${metric('Generated',dateVal(d.metadata?.generated_at))}</div><p class="notice">Not every module stores data per individual tree. When the platform has no tree-linked record, this passport indicates that the data is unavailable. Regional dashboards, general reports, and unlinked citizen sightings are not attributed to this tree.</p>`)}
+<section class="qr-section print-hide"><h2 style="margin:0;color:var(--green)">📱 Dynamic QR code</h2><p>Scan or open this link to view the latest public passport for this tree.</p><div class="qr-url" id="qr-url-text"></div><div class="qr-canvas-wrap"><div id="qr-svg-container"></div><canvas id="qr-canvas" width="200" height="200"></canvas></div><div id="qr-message" class="sub"></div><div class="qr-actions"><button onclick="makeQR()">↻ Regenerate QR</button><button class="secondary" onclick="downloadQR()">Download QR</button><button class="secondary" onclick="copyLink()">Copy link</button><a class="secondary" id="open-link" target="_blank" rel="noopener">Open passport</a></div><div class="host-config"><label for="host-override-input">Phone / LAN / public host:</label><input id="host-override-input" placeholder="http://192.168.1.x:8000"><button class="action" onclick="applyHost()">Apply host</button><span>Use your computer's LAN IP or a public HTTPS URL when scanning from another device.</span></div></section>
+<div class="footer">Wild Tea Tree Platform · Public tree passport · Generated from available linked records</div>`;
+$('host-override-input').value=localStorage.getItem('tea_custom_qr_host')||window.location.origin;
+$('open-link').href=`${getBaseUrl()}/tree_passport.html?id=${encodeURIComponent(t.tree_id)}`;makeQR();}
+async function init(){const id=new URLSearchParams(location.search).get('id');if(!id){$('passport-content').innerHTML='<div class="error">No tree ID was supplied. Open the passport from a tree QR code or registry.</div>';return;}try{const data=await fetch(`/api/passport/${encodeURIComponent(id)}`).then(async r=>{if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||`HTTP ${r.status}`);}return r.json();});passportData=data;const tree=data.tree;const [soil,climate,satellite,medicinal,postdeath]=await Promise.all([fetchOptional(`/api/soil/tree/${encodeURIComponent(id)}`),fetchOptional(`/api/climate/tree/${encodeURIComponent(id)}`),fetchOptional(`/api/satellite/vegetation/${encodeURIComponent(id)}?days=30`),fetchOptional(`/api/lifecycle/medicinal/${encodeURIComponent(id)}`),fetchOptional(`/api/lifecycle/post-death/${encodeURIComponent(id)}`)]);renderPassport(data,{soil,climate,satellite,medicinal,postdeath});}catch(e){console.error(e);$('passport-content').innerHTML=`<div class="error"><h2>Could not load this tree passport</h2><p>${esc(e.message)}</p><p>Confirm that the tree ID exists and the FastAPI server is running.</p></div>`;}}
+init();
+</script>
 </body>
 </html>
